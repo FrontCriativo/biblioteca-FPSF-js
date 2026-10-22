@@ -4,6 +4,7 @@ import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolverRota, ErroHttp } from './rotas.js';
 import { expirarReservasVencidas } from './repositorio.js';
+import { apagarSessoesVencidas, apagarFalhasLoginVencidas } from './auth.js';
 
 const PORTA = Number(process.env.PORT) || 3000;
 const RAIZ_FRONT = fileURLToPath(new URL('../frontend/', import.meta.url));
@@ -97,6 +98,19 @@ const servidor = createServer(async (req, res) => {
     });
   }
 });
+
+// Faxina: sessões vencidas saem do banco na inicialização e depois a cada hora.
+function limparVencidos() {
+  try {
+    const sessoes = apagarSessoesVencidas();
+    apagarFalhasLoginVencidas();
+    if (sessoes) console.log(`  ${sessoes} sessão(ões) vencida(s) apagada(s).`);
+  } catch (erro) {
+    console.error('Erro ao apagar sessões vencidas:', erro);
+  }
+}
+limparVencidos();
+setInterval(limparVencidos, 60 * 60 * 1000).unref();
 
 servidor.listen(PORTA, () => {
   console.log(`\n  Biblioteca Virtual FPSF`);

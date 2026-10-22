@@ -1,6 +1,7 @@
 import {
   criarHashSenha, conferirSenha, abrirSessao, encerrarSessao,
   usuarioDaSessao, lerCookie, cabecalhoCookieSessao, cookieSessaoExpirado,
+  loginBloqueado, registrarFalhaLogin, limparFalhasLogin,
 } from './auth.js';
 import { existsSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -66,10 +67,17 @@ const rotas = {
   'POST /api/login': (req, { corpo }) => {
     const email = campoObrigatorio(corpo, 'email');
     const senha = campoObrigatorio(corpo, 'senha');
+    // Endereço da conexão, e não X-Forwarded-For: esse cabeçalho o próprio cliente pode inventar.
+    const ip = req.socket.remoteAddress ?? 'desconhecido';
+    if (loginBloqueado(email, ip)) {
+      throw new ErroHttp(429, 'Muitas tentativas. Tente de novo em alguns minutos.');
+    }
     const usuario = db.prepare('SELECT * FROM usuarios WHERE email = ?').get(email);
     if (!usuario || !conferirSenha(senha, usuario.senha_hash)) {
+      registrarFalhaLogin(email, ip);
       throw new ErroHttp(401, 'E-mail ou senha incorretos.');
     }
+    limparFalhasLogin(email);
     const token = abrirSessao(usuario.id);
     return {
       corpo: {

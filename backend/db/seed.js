@@ -100,5 +100,8 @@ transacao(() => {
 
 console.log('Banco populado com sucesso.');
 console.log(`  ${MATERIAS.length} matérias, ${LIVROS.length} livros, ${USUARIOS.length} usuários.`);
-console.log('\n  Admin:  admin@fpsf.edu.br / admin123');
-console.log('  Aluno:  beatriz.lima@fpsf.edu.br / aluno123\n');
+console.log('\n  Contas criadas com senha padrão (se ainda não existiam):');
+console.log('    Admin:  admin@fpsf.edu.br / admin123');
+console.log('    Aluno:  beatriz.lima@fpsf.edu.br / aluno123');
+console.log('\n  ATENÇÃO: troque essas senhas padrão antes de colocar o site no ar.');
+console.log('  Qualquer pessoa que leia este código consegue entrar com elas.\n');
