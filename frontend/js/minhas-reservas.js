@@ -33,6 +33,11 @@ async function desenhar() {
           <div><dt>Reservado em</dt><dd>${formatarData(r.criada_em)}</dd></div>
           ${r.status === 'ativa'
             ? `<div><dt>Retirar até</dt><dd>${formatarData(r.expira_em)}</dd></div>` : ''}
+          ${r.status === 'retirada' && r.devolver_ate
+            ? `<div${r.atrasada ? ' class="prazo-atrasado"' : ''}>
+                <dt>${r.atrasada ? 'Devolução atrasada' : 'Prazo'}</dt>
+                <dd>Devolver até ${formatarData(r.devolver_ate)}</dd>
+              </div>` : ''}
         </dl>
       </div>
       ${r.status === 'ativa'

@@ -63,10 +63,11 @@ async function carregarResumo() {
     ['Exemplares', resumo.exemplares],
     ['Reservas aguardando', resumo.reservas_ativas],
     ['Com leitores', resumo.retiradas],
+    ['Atrasados', resumo.atrasadas, resumo.atrasadas > 0],
     ['Alunos cadastrados', resumo.usuarios],
   ];
-  document.querySelector('[data-resumo]').innerHTML = cartoes.map(([rotulo, valor]) => `
-    <div class="stat-card">
+  document.querySelector('[data-resumo]').innerHTML = cartoes.map(([rotulo, valor, alerta]) => `
+    <div class="stat-card${alerta ? ' stat-card--alerta' : ''}">
       <span class="stat-card__valor">${valor}</span>
       <span class="stat-card__rotulo">${rotulo}</span>
     </div>`).join('');
@@ -78,7 +79,7 @@ async function carregarReservas() {
   const corpo = document.querySelector('[data-tabela-reservas]');
 
   if (!reservas.length) {
-    corpo.innerHTML = `<tr><td colspan="6" class="tabela-vazia">Nenhuma reserva neste filtro.</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="7" class="tabela-vazia">Nenhuma reserva neste filtro.</td></tr>`;
     return;
   }
 
@@ -99,6 +100,10 @@ async function carregarReservas() {
       </td>
       <td>${formatarData(r.criada_em)}</td>
       <td>${r.status === 'ativa' ? formatarData(r.expira_em) : '—'}</td>
+      <td${r.atrasada ? ' class="prazo-atrasado"' : ''}>
+        ${r.status === 'retirada' && r.devolver_ate ? formatarData(r.devolver_ate) : '—'}
+        ${r.atrasada ? '<span class="cel-sub prazo-atrasado">atrasado</span>' : ''}
+      </td>
       <td><span class="selo selo--${r.status}">${ROTULOS_STATUS[r.status]}</span></td>
       <td class="cel-acoes">
         ${r.status === 'ativa' ? `<button class="mini-btn" data-retirar="${r.id}">Retirado</button>` : ''}
@@ -127,14 +132,19 @@ document.addEventListener('click', async (evento) => {
       return;
     }
     ok = await comFeedback(() => api.removerLivro(excluir), 'Livro removido.');
+    if (ok) document.dispatchEvent(new CustomEvent('livro-removido', { detail: excluir }));
   }
 
   alvo.disabled = false;
   if (ok) recarregarTudo();
 });
 
+// Livros da tabela do acervo, por id: o botão "Editar" preenche o formulário a partir daqui.
+let livrosDoAcervo = new Map();
+
 async function carregarLivros() {
   const livros = await api.livros();
+  livrosDoAcervo = new Map(livros.map((l) => [String(l.id), l]));
   document.querySelector('[data-tabela-livros]').innerHTML = livros.map((l) => `
     <tr>
       <td>
@@ -154,6 +164,7 @@ async function carregarLivros() {
         </span>
       </td>
       <td class="cel-acoes">
+        <button class="mini-btn" data-editar="${l.id}">Editar</button>
         <button class="mini-btn" data-add-exemplar="${l.id}">+ exemplar</button>
         <button class="mini-btn mini-btn--perigo" data-excluir="${l.id}">Remover</button>
       </td>
@@ -168,24 +179,78 @@ async function montarFormularioLivro() {
     .join('');
 
   const capa = montarDropzoneCapa();
+  const form = document.querySelector('[data-form-livro]');
+  const titulo = form.querySelector('[data-form-livro-titulo]');
+  const botaoEnviar = form.querySelector('[type="submit"]');
+  const botaoCancelar = form.querySelector('[data-cancelar-edicao]');
+  const campoExemplares = form.querySelector('[data-campo-exemplares]');
+  let editando = null; // livro em edição, ou null quando o formulário cria um livro novo
 
-  document.querySelector('[data-form-livro]').addEventListener('submit', async (evento) => {
+  function modoCriar() {
+    editando = null;
+    form.reset();
+    capa.limpar();
+    form.classList.remove('is-editando');
+    titulo.textContent = 'Adicionar livro';
+    botaoEnviar.textContent = 'Adicionar ao acervo';
+    botaoCancelar.hidden = true;
+    campoExemplares.hidden = false;
+    campoExemplares.querySelector('input').disabled = false;
+  }
+
+  function modoEditar(livro) {
+    modoCriar();
+    editando = livro;
+    form.titulo.value = livro.titulo;
+    form.autor.value = livro.autor;
+    form.materia_slug.value = livro.materia_slug;
+    form.paginas.value = livro.paginas ?? '';
+    form.sinopse.value = livro.sinopse ?? '';
+    capa.mostrarAtual(livro.capa);
+    form.classList.add('is-editando');
+    titulo.textContent = `Editar “${livro.titulo}”`;
+    botaoEnviar.textContent = 'Salvar alterações';
+    botaoCancelar.hidden = false;
+    campoExemplares.hidden = true;
+    campoExemplares.querySelector('input').disabled = true; // fora do FormData e do "required"
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    form.titulo.focus({ preventScroll: true });
+  }
+
+  botaoCancelar.addEventListener('click', modoCriar);
+
+  document.querySelector('[data-tabela-livros]').addEventListener('click', (evento) => {
+    const botao = evento.target.closest('[data-editar]');
+    const livro = botao && livrosDoAcervo.get(botao.dataset.editar);
+    if (livro) modoEditar(livro);
+  });
+
+  // Livro removido enquanto estava no formulário: volta ao modo de criação.
+  document.addEventListener('livro-removido', (evento) => {
+    if (editando && String(editando.id) === evento.detail) modoCriar();
+  });
+
+  form.addEventListener('submit', async (evento) => {
     evento.preventDefault();
-    const form = evento.target;
-    const botao = form.querySelector('[type="submit"]');
-    botao.disabled = true;
+    botaoEnviar.disabled = true;
+    const emEdicao = editando;
     const enviado = await comFeedback(async () => {
       // A imagem só sobe no envio, para não deixar arquivos órfãos em assets/.
       if (capa.arquivo() && !form.querySelector('[data-capa-nome]').value) {
         const { arquivo } = await api.enviarCapa(capa.arquivo().name, await lerBase64(capa.arquivo()));
         form.querySelector('[data-capa-nome]').value = arquivo;
       }
-      await api.criarLivro(Object.fromEntries(new FormData(form)));
-    }, 'Livro adicionado ao acervo.');
-    botao.disabled = false;
+      const dados = Object.fromEntries(new FormData(form));
+      if (emEdicao) {
+        // O formulário não tem idioma: manda o atual para o PUT não trocá-lo pelo padrão.
+        await api.atualizarLivro(emEdicao.id, { ...dados, idioma: emEdicao.idioma });
+      } else {
+        await api.criarLivro(dados);
+      }
+    }, emEdicao ? 'Alterações salvas.' : 'Livro adicionado ao acervo.');
+    botaoEnviar.disabled = false;
     if (enviado) {
-      form.reset();
-      capa.limpar();
+      modoCriar();
       recarregarTudo();
     }
   });
@@ -229,9 +294,21 @@ function montarDropzoneCapa() {
 
   return {
     arquivo: () => escolhido,
+    /** Edição: mostra a capa já salva; ela continua valendo até outra imagem ser escolhida. */
+    mostrarAtual(nomeArquivo) {
+      escolhido = null;
+      entrada.value = '';
+      nomeSalvo.value = nomeArquivo ?? '';
+      if (!nomeArquivo) return;
+      URL.revokeObjectURL(preview.src);
+      preview.src = `assets/${nomeArquivo}`;
+      preview.hidden = false;
+      texto.textContent = 'Capa atual — clique ou arraste outra imagem para trocar';
+    },
     limpar() {
       escolhido = null;
       entrada.value = '';
+      nomeSalvo.value = ''; // form.reset() não limpa input hidden
       URL.revokeObjectURL(preview.src);
       preview.removeAttribute('src');
       preview.hidden = true;

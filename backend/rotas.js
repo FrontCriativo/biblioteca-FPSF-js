@@ -179,7 +179,8 @@ const rotas = {
   'POST /api/reservas': (req, { corpo }) => {
     const usuario = exigirLogin(req);
     const livroId = inteiroPositivo(corpo.livro_id, 'livro_id');
-    return { corpo: repo.criarReserva(livroId, usuario.id), status: 201 };
+    const limite = usuario.papel === 'admin' ? null : repo.LIMITE_RESERVAS_ALUNO;
+    return { corpo: repo.criarReserva(livroId, usuario.id, { limite }), status: 201 };
   },
 
   'POST /api/reservas/:id/cancelar': (req, { params }) => {

@@ -40,6 +40,13 @@ const MIGRACOES = [
       db.exec('ALTER TABLE livros ADD COLUMN busca_normalizada TEXT');
     }
   },
+  // 2 — prazo de devolução. Empréstimos retirados antes desta versão ficam
+  // sem prazo (NULL): não dá para saber quando foram retirados.
+  () => {
+    if (!colunaExiste('reservas', 'devolver_ate')) {
+      db.exec('ALTER TABLE reservas ADD COLUMN devolver_ate TEXT');
+    }
+  },
 ];
 
 function migrar() {

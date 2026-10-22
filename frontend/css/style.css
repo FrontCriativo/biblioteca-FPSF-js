@@ -1040,6 +1040,8 @@ button, input, textarea{
 }
 
 /* utility */
+/* O atributo hidden vale mesmo em elementos com display próprio (.btn, img). */
+[hidden]{ display: none !important; }
 .sr-only{
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
@@ -1171,6 +1173,8 @@ button, input, textarea{
   color: var(--heading);
 }
 
+.prazo-atrasado dt, .reserva-card__dados .prazo-atrasado dd, .tabela .prazo-atrasado{ color: var(--vermelho-texto); }
+
 @media (max-width: 640px){
   .reserva-card{ flex-direction: column; align-items: flex-start; }
 }
@@ -1193,7 +1197,7 @@ button, input, textarea{
 
 .stat-grid{
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 16px;
   margin-bottom: 34px;
 }
@@ -1214,6 +1218,8 @@ button, input, textarea{
   line-height: 1;
 }
 .stat-card__rotulo{ font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
+.stat-card--alerta{ background: var(--vermelho-fundo); border-color: var(--vermelho-fundo); }
+.stat-card--alerta :is(.stat-card__valor, .stat-card__rotulo){ color: var(--vermelho-texto); }
 
 .admin-tabs{
   display: flex;
@@ -1265,6 +1271,8 @@ button, input, textarea{
 
 .admin-form{ margin-bottom: 30px; }
 .admin-form h3{ font-size: 17px; margin-bottom: 20px; }
+.admin-form__acoes{ display: flex; gap: 12px; flex-wrap: wrap; }
+.admin-form.is-editando{ border-color: var(--lilac); }
 
 .tabela-wrap{
   background: var(--card);
@@ -1333,5 +1341,8 @@ button, input, textarea{
 .mini-btn--perigo:hover{ border-color: var(--vermelho-texto); background: var(--vermelho-fundo); }
 
 @media (max-width: 1000px){
+  .stat-grid{ grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 560px){
   .stat-grid{ grid-template-columns: repeat(2, 1fr); }
 }

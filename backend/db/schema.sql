@@ -60,7 +60,9 @@ CREATE TABLE IF NOT EXISTS reservas (
                  CHECK (status IN ('ativa', 'retirada', 'devolvida', 'cancelada')),
   criada_em    TEXT NOT NULL DEFAULT (datetime('now')),
   expira_em    TEXT NOT NULL,
-  encerrada_em TEXT
+  encerrada_em TEXT,
+  -- Prazo de devolução, gravado quando a reserva vira 'retirada'.
+  devolver_ate TEXT
 );
 
 -- Invariante central: um exemplar só pode ter UMA reserva não-encerrada.

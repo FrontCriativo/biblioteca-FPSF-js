@@ -2,6 +2,12 @@ import { db, transacao } from './db/index.js';
 import { normalizarTexto, buscaNormalizadaLivro } from './texto.js';
 
 const DIAS_PARA_RETIRAR = 3;
+const DIAS_PARA_DEVOLVER = 14;
+// Reservas simultâneas (ativa + retirada) que um aluno pode ter. A coordenação não tem limite.
+export const LIMITE_RESERVAS_ALUNO = 3;
+
+// Livro retirado cujo prazo de devolução já passou.
+const ATRASADA = "r.status = 'retirada' AND r.devolver_ate < datetime('now')";
 
 const COLUNAS_LIVRO = `
   l.id, l.slug, l.titulo, l.autor, l.materia_slug, l.capa,
@@ -88,13 +94,16 @@ export function atualizarLivro(id, dados) {
 }
 
 export function removerLivro(id) {
-  const reservasAtivas = db.prepare(`
-    SELECT COUNT(*) AS n FROM reservas r
+  // Apagar o livro apagaria em cascata exemplares e reservas, e o histórico se perderia.
+  // Por isso só sai do acervo o livro que nunca teve reserva, em qualquer status.
+  const temHistorico = db.prepare(`
+    SELECT 1 FROM reservas r
       JOIN exemplares e ON e.id = r.exemplar_id
-     WHERE e.livro_id = ? AND r.status IN ('ativa', 'retirada')
-  `).get(id).n;
-  if (reservasAtivas > 0) {
-    throw Object.assign(new Error('Este livro tem reservas ativas e não pode ser removido.'), { status: 409 });
+     WHERE e.livro_id = ?
+     LIMIT 1
+  `).get(id);
+  if (temHistorico) {
+    throw Object.assign(new Error('Este livro tem histórico de reservas e não pode ser removido.'), { status: 409 });
   }
   db.prepare('DELETE FROM livros WHERE id = ?').run(id);
 }
@@ -106,7 +115,8 @@ export function adicionarExemplares(livroId, quantidade) {
   }
 }
 
-export function criarReserva(livroId, usuarioId) {
+/** limite: máximo de reservas simultâneas do usuário; null = sem limite (coordenação). */
+export function criarReserva(livroId, usuarioId, { limite = LIMITE_RESERVAS_ALUNO } = {}) {
   return transacao(() => {
     const jaReservado = db.prepare(`
       SELECT 1 FROM reservas r
@@ -115,6 +125,19 @@ export function criarReserva(livroId, usuarioId) {
     `).get(livroId, usuarioId);
     if (jaReservado) {
       throw Object.assign(new Error('Você já tem uma reserva ativa deste livro.'), { status: 409 });
+    }
+
+    if (limite !== null) {
+      const emAberto = db.prepare(`
+        SELECT COUNT(*) AS n FROM reservas
+         WHERE usuario_id = ? AND status IN ('ativa', 'retirada')
+      `).get(usuarioId).n;
+      if (emAberto >= limite) {
+        throw Object.assign(
+          new Error(`Você já tem ${limite} livros reservados ou emprestados. Devolva ou cancele um para reservar outro.`),
+          { status: 409 }
+        );
+      }
     }
 
     const livre = db.prepare(`
@@ -140,7 +163,8 @@ export function criarReserva(livroId, usuarioId) {
 
 export function buscarReserva(id) {
   return db.prepare(`
-    SELECT r.id, r.status, r.criada_em, r.expira_em, r.encerrada_em,
+    SELECT r.id, r.status, r.criada_em, r.expira_em, r.encerrada_em, r.devolver_ate,
+           (${ATRASADA}) AS atrasada,
            e.codigo AS exemplar_codigo,
            l.slug AS livro_slug, l.titulo, l.autor, l.capa,
            u.nome AS usuario_nome, u.email AS usuario_email, u.turma
@@ -154,7 +178,8 @@ export function buscarReserva(id) {
 
 export function listarReservasDoUsuario(usuarioId) {
   return db.prepare(`
-    SELECT r.id, r.status, r.criada_em, r.expira_em,
+    SELECT r.id, r.status, r.criada_em, r.expira_em, r.devolver_ate,
+           (${ATRASADA}) AS atrasada,
            e.codigo AS exemplar_codigo,
            l.slug AS livro_slug, l.titulo, l.autor, l.capa
       FROM reservas r
@@ -166,10 +191,17 @@ export function listarReservasDoUsuario(usuarioId) {
 }
 
 export function listarTodasReservas(status) {
-  const filtro = status && status !== 'todas' ? 'WHERE r.status = ?' : '';
-  const params = filtro ? [status] : [];
+  let filtro = '';
+  let params = [];
+  if (status === 'atrasadas') {
+    filtro = `WHERE ${ATRASADA}`;
+  } else if (status && status !== 'todas') {
+    filtro = 'WHERE r.status = ?';
+    params = [status];
+  }
   return db.prepare(`
-    SELECT r.id, r.status, r.criada_em, r.expira_em, r.encerrada_em,
+    SELECT r.id, r.status, r.criada_em, r.expira_em, r.encerrada_em, r.devolver_ate,
+           (${ATRASADA}) AS atrasada,
            e.codigo AS exemplar_codigo,
            l.slug AS livro_slug, l.titulo, l.autor, l.capa,
            u.nome AS usuario_nome, u.email AS usuario_email, u.turma
@@ -220,10 +252,13 @@ export function mudarStatusReserva(id, novoStatus, usuarioId = null) {
       { status: 409 }
     );
   }
-  const encerra = novoStatus !== 'retirada';
+  const retira = novoStatus === 'retirada';
+  // Na retirada começa a contar o prazo de devolução; os outros status encerram a reserva.
   db.prepare(`
     UPDATE reservas
-       SET status = ?, encerrada_em = ${encerra ? "datetime('now')" : 'NULL'}
+       SET status = ?,
+           encerrada_em = ${retira ? 'NULL' : "datetime('now')"}
+           ${retira ? `, devolver_ate = datetime('now', '+${DIAS_PARA_DEVOLVER} days')` : ''}
      WHERE id = ?
   `).run(novoStatus, id);
   return buscarReserva(id);
@@ -245,6 +280,7 @@ export function resumoAdmin() {
     exemplares: contar("SELECT COUNT(*) AS n FROM exemplares WHERE estado = 'ok'"),
     reservas_ativas: contar("SELECT COUNT(*) AS n FROM reservas WHERE status = 'ativa'"),
     retiradas: contar("SELECT COUNT(*) AS n FROM reservas WHERE status = 'retirada'"),
+    atrasadas: contar(`SELECT COUNT(*) AS n FROM reservas r WHERE ${ATRASADA}`),
     usuarios: contar("SELECT COUNT(*) AS n FROM usuarios WHERE papel = 'aluno'"),
   };
 }

@@ -65,6 +65,7 @@
         <select data-filtro-status>
           <option value="ativa">Aguardando retirada</option>
           <option value="retirada">Com os leitores</option>
+          <option value="atrasadas">Atrasados</option>
           <option value="devolvida">Devolvidas</option>
           <option value="cancelada">Canceladas</option>
           <option value="todas">Todas</option>
@@ -76,7 +77,7 @@
         <thead>
           <tr>
             <th>Livro</th><th>Leitor</th><th>Reservado</th>
-            <th>Retirar até</th><th>Situação</th><th>Ações</th>
+            <th>Retirar até</th><th>Devolver até</th><th>Situação</th><th>Ações</th>
           </tr>
         </thead>
         <tbody data-tabela-reservas></tbody>
@@ -88,7 +89,7 @@
     <div class="admin-bloco__head"><h2>Acervo</h2></div>
 
     <form class="form-card admin-form" data-form-livro>
-      <h3>Adicionar livro</h3>
+      <h3 data-form-livro-titulo>Adicionar livro</h3>
       <div class="field-row">
         <div class="field">
           <label for="novo-titulo">Título</label>
@@ -119,7 +120,8 @@
           <label for="novo-paginas">Páginas</label>
           <input id="novo-paginas" name="paginas" type="number" min="1">
         </div>
-        <div class="field">
+        <!-- Só na criação: na edição, exemplares entram pelo botão "+ exemplar" da tabela. -->
+        <div class="field" data-campo-exemplares>
           <label for="novo-exemplares">Quantos exemplares</label>
           <input id="novo-exemplares" name="exemplares" type="number" min="1" value="1" required>
         </div>
@@ -128,7 +130,10 @@
         <label for="novo-sinopse">Sinopse</label>
         <textarea id="novo-sinopse" name="sinopse" rows="3"></textarea>
       </div>
-      <button class="btn btn--lilac" type="submit">Adicionar ao acervo</button>
+      <div class="admin-form__acoes">
+        <button class="btn btn--lilac" type="submit">Adicionar ao acervo</button>
+        <button class="btn btn--outline" type="button" data-cancelar-edicao hidden>Cancelar edição</button>
+      </div>
     </form>
 
     <div class="tabela-wrap">
