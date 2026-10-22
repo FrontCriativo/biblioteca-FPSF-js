@@ -88,14 +88,17 @@ function montarAcoes(livro, minhaReserva, esgotado) {
   }
 
   if (minhaReserva) {
+    // Livro já retirado não se cancela: só a biblioteca registra a devolução.
+    const podeCancelar = minhaReserva.status === 'ativa';
     acoes.innerHTML = `
-      <button class="btn btn--outline" type="button" data-cancelar>Cancelar minha reserva</button>
+      ${podeCancelar ? '<button class="btn btn--outline" type="button" data-cancelar>Cancelar minha reserva</button>' : ''}
       <a href="minhas-reservas.html" class="btn btn--lilac">Ver minhas reservas</a>`;
     mostrarAviso(
-      minhaReserva.status === 'ativa'
+      podeCancelar
         ? `Reserva feita. Retire na biblioteca até ${formatarData(minhaReserva.expira_em)} (exemplar ${minhaReserva.exemplar_codigo}).`
         : `Você está com este livro (exemplar ${minhaReserva.exemplar_codigo}).`
     );
+    if (!podeCancelar) return;
     acoes.querySelector('[data-cancelar]').addEventListener('click', async (evento) => {
       evento.target.disabled = true;
       try {

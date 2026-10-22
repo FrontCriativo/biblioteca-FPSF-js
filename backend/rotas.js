@@ -177,7 +177,7 @@ const rotas = {
   'POST /api/reservas/:id/cancelar': (req, { params }) => {
     const usuario = exigirLogin(req);
     const id = inteiroPositivo(params.id, 'id');
-    // Admin cancela qualquer reserva; aluno, só a própria.
+    // Admin cancela qualquer reserva, ativa ou retirada; aluno, só a própria e ainda ativa.
     const dono = usuario.papel === 'admin' ? null : usuario.id;
     return { corpo: repo.mudarStatusReserva(id, 'cancelada', dono) };
   },

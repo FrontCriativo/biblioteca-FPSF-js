@@ -594,7 +594,8 @@ button, input, textarea{
   gap: 30px 24px;
 }
 .book-grid .book{ width: auto; }
-.book-grid .book__cover{ width: 100%; height: 190px; }
+/* Proporção de capa (2:3) em vez de altura fixa: a imagem aparece inteira em qualquer largura. */
+.book-grid .book__cover{ width: 100%; height: auto; aspect-ratio: 2 / 3; }
 
 .category-block{ margin-bottom: 46px; }
 .category-block__head{

@@ -35,7 +35,7 @@ async function desenhar() {
             ? `<div><dt>Retirar até</dt><dd>${formatarData(r.expira_em)}</dd></div>` : ''}
         </dl>
       </div>
-      ${['ativa', 'retirada'].includes(r.status)
+      ${r.status === 'ativa'
         ? `<button class="btn btn--outline" type="button" data-cancelar="${r.id}">Cancelar</button>` : ''}
     </article>`).join('');
 }

@@ -182,14 +182,22 @@ export function listarTodasReservas(status) {
   `).all(...params);
 }
 
+// Transições feitas pela coordenação.
 const TRANSICOES = {
   retirada: ['ativa'],
   devolvida: ['retirada'],
   cancelada: ['ativa', 'retirada'],
 };
 
+// O aluno só cancela o que ainda não retirou: se cancelasse um livro que está
+// com ele, o exemplar voltaria a aparecer como disponível.
+const TRANSICOES_ALUNO = {
+  cancelada: ['ativa'],
+};
+
+/** usuarioId = null: ação da coordenação. Com usuarioId: ação do próprio aluno. */
 export function mudarStatusReserva(id, novoStatus, usuarioId = null) {
-  const permitidos = TRANSICOES[novoStatus];
+  const permitidos = (usuarioId === null ? TRANSICOES : TRANSICOES_ALUNO)[novoStatus];
   if (!permitidos) {
     throw Object.assign(new Error('Status inválido.'), { status: 400 });
   }
@@ -199,6 +207,12 @@ export function mudarStatusReserva(id, novoStatus, usuarioId = null) {
   }
   if (usuarioId !== null && atual.usuario_id !== usuarioId) {
     throw Object.assign(new Error('Esta reserva não é sua.'), { status: 403 });
+  }
+  if (usuarioId !== null && novoStatus === 'cancelada' && atual.status === 'retirada') {
+    throw Object.assign(
+      new Error('Você já retirou este livro, então a reserva não pode ser cancelada. Devolva o exemplar na biblioteca.'),
+      { status: 409 }
+    );
   }
   if (!permitidos.includes(atual.status)) {
     throw Object.assign(
