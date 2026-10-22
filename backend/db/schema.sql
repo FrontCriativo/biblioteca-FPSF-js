@@ -17,7 +17,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
   senha_hash  TEXT NOT NULL,
   papel       TEXT NOT NULL DEFAULT 'aluno' CHECK (papel IN ('aluno', 'admin')),
   turma       TEXT,
-  criado_em   TEXT NOT NULL DEFAULT (datetime('now'))
+  criado_em   TEXT NOT NULL DEFAULT (datetime('now')),
+  -- 1 = senha provisória (seed ou definida pela coordenação): trocar no próximo acesso.
+  trocar_senha INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS materias (
@@ -80,3 +82,19 @@ CREATE TABLE IF NOT EXISTS sessoes (
   criada_em  TEXT NOT NULL DEFAULT (datetime('now')),
   expira_em  TEXT NOT NULL
 );
+
+-- Depoimentos chegam pelo site e só aparecem depois de aprovados pela biblioteca.
+-- usuario_id fica preenchido quando quem escreveu estava logado.
+CREATE TABLE IF NOT EXISTS depoimentos (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+  nome       TEXT NOT NULL,
+  turma      TEXT NOT NULL,
+  mensagem   TEXT NOT NULL,
+  nota       INTEGER NOT NULL CHECK (nota BETWEEN 1 AND 5),
+  status     TEXT NOT NULL DEFAULT 'pendente'
+               CHECK (status IN ('pendente', 'aprovado', 'recusado')),
+  criado_em  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_depoimentos_status ON depoimentos(status);

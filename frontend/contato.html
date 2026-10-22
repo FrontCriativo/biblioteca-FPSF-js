@@ -40,7 +40,7 @@
 <section class="page-header">
   <div class="container">
     <h1>Fale conosco</h1>
-    <p>Dúvidas sobre um livro, sugestões de título ou problemas de acesso — a equipe da biblioteca responde por aqui.</p>
+    <p>Dúvidas sobre um livro, sugestões de título ou problemas de acesso — escreva para a equipe da biblioteca.</p>
   </div>
 </section>
 
@@ -71,7 +71,7 @@
     </div>
 
     <div class="form-card">
-      <form data-demo-form="Mensagem registrada por aqui! Este é um protótipo — nenhum e-mail foi enviado de verdade.">
+      <form data-form-contato>
         <div class="field-row">
           <div class="field">
             <label for="nome">Nome</label>
@@ -85,8 +85,8 @@
 
         <div class="field-row">
           <div class="field">
-            <label for="email-contato">E-mail</label>
-            <input type="email" id="email-contato" name="email" placeholder="seunome@email.com" required>
+            <label for="email-contato">E-mail para resposta (opcional)</label>
+            <input type="email" id="email-contato" name="email" placeholder="seunome@email.com">
           </div>
           <div class="field">
             <label for="assunto-contato">Assunto</label>
@@ -104,8 +104,9 @@
           <textarea id="mensagem" name="mensagem" placeholder="Conte com detalhes o que você precisa" required></textarea>
         </div>
 
-        <button type="submit" class="btn btn--lilac">Enviar mensagem</button>
-        <p class="form-feedback" style="display:none; margin-top:16px; color:var(--lilac-deep); font-size:13.5px; font-weight:600;"></p>
+        <p class="contato-nota">O botão abre o seu programa de e-mail com a mensagem pronta, endereçada a biblioteca@fpsf.edu.br. É só conferir e enviar.</p>
+        <button type="submit" class="btn btn--lilac">Abrir no meu e-mail</button>
+        <p class="form-feedback" hidden></p>
       </form>
     </div>
 

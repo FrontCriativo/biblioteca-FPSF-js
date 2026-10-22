@@ -294,3 +294,42 @@ export function listarUsuarios() {
      ORDER BY u.nome
   `).all();
 }
+
+export function criarDepoimento({ usuarioId, nome, turma, mensagem, nota }) {
+  const { lastInsertRowid } = db.prepare(`
+    INSERT INTO depoimentos (usuario_id, nome, turma, mensagem, nota)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(usuarioId ?? null, nome, turma, mensagem, nota);
+  return { id: Number(lastInsertRowid), status: 'pendente' };
+}
+
+/** Só os aprovados, sem dados de quem enviou além do nome e da turma. */
+export function listarDepoimentosAprovados() {
+  return db.prepare(`
+    SELECT id, nome, turma, mensagem, nota, criado_em
+      FROM depoimentos
+     WHERE status = 'aprovado'
+     ORDER BY criado_em DESC, id DESC
+  `).all();
+}
+
+/** Para a moderação: status = null traz todos, com os pendentes primeiro. */
+export function listarDepoimentos(status = null) {
+  const filtro = status ? 'WHERE d.status = ?' : '';
+  return db.prepare(`
+    SELECT d.id, d.nome, d.turma, d.mensagem, d.nota, d.status, d.criado_em,
+           u.email AS usuario_email
+      FROM depoimentos d
+      LEFT JOIN usuarios u ON u.id = d.usuario_id
+      ${filtro}
+     ORDER BY d.status = 'pendente' DESC, d.criado_em DESC, d.id DESC
+  `).all(...(status ? [status] : []));
+}
+
+export function moderarDepoimento(id, status) {
+  const { changes } = db.prepare('UPDATE depoimentos SET status = ? WHERE id = ?').run(status, id);
+  if (!changes) {
+    throw Object.assign(new Error('Depoimento não encontrado.'), { status: 404 });
+  }
+  return db.prepare('SELECT id, status FROM depoimentos WHERE id = ?').get(id);
+}

@@ -44,10 +44,12 @@ function iniciar() {
         p.hidden = p.dataset.painel !== aba.dataset.aba;
       });
       if (aba.dataset.aba === 'usuarios') carregarUsuarios();
+      if (aba.dataset.aba === 'depoimentos') carregarDepoimentos();
     });
   });
 
   document.querySelector('[data-filtro-status]').addEventListener('change', carregarReservas);
+  document.querySelector('[data-filtro-depoimentos]').addEventListener('change', carregarDepoimentos);
   montarFormularioLivro();
   recarregarTudo();
 }
@@ -115,12 +117,22 @@ async function carregarReservas() {
 }
 
 document.addEventListener('click', async (evento) => {
-  const alvo = evento.target.closest('[data-retirar], [data-devolver], [data-cancelar], [data-excluir], [data-add-exemplar]');
+  const alvo = evento.target.closest(
+    '[data-retirar], [data-devolver], [data-cancelar], [data-excluir], [data-add-exemplar], [data-aprovar], [data-recusar]'
+  );
   if (!alvo) return;
   alvo.disabled = true;
 
-  const { retirar, devolver, cancelar, excluir, addExemplar } = alvo.dataset;
+  const { retirar, devolver, cancelar, excluir, addExemplar, aprovar, recusar } = alvo.dataset;
   let ok = false;
+
+  if (aprovar) ok = await comFeedback(() => api.aprovarDepoimento(aprovar), 'Depoimento aprovado: ele já aparece no site.');
+  if (recusar) ok = await comFeedback(() => api.recusarDepoimento(recusar), 'Depoimento recusado.');
+  if (aprovar || recusar) {
+    alvo.disabled = false;
+    if (ok) carregarDepoimentos();
+    return;
+  }
 
   if (retirar) ok = await comFeedback(() => api.marcarRetirada(retirar), 'Retirada registrada.');
   if (devolver) ok = await comFeedback(() => api.marcarDevolvida(devolver), 'Devolução registrada.');
@@ -350,4 +362,47 @@ async function carregarUsuarios() {
       carregarResumo();
     }
   });
+}
+
+const ROTULOS_DEPOIMENTO = {
+  pendente: ['Aguardando', 'ativa'],
+  aprovado: ['Aprovado', 'devolvida'],
+  recusado: ['Recusado', 'cancelada'],
+};
+
+async function carregarDepoimentos() {
+  const corpo = document.querySelector('[data-tabela-depoimentos]');
+  const status = document.querySelector('[data-filtro-depoimentos]').value;
+  let depoimentos;
+  try {
+    depoimentos = await api.depoimentosAdmin(status);
+  } catch (erro) {
+    corpo.innerHTML = `<tr><td colspan="6" class="tabela-vazia">Não foi possível carregar: ${escaparHtml(erro.message)}</td></tr>`;
+    return;
+  }
+
+  if (!depoimentos.length) {
+    corpo.innerHTML = `<tr><td colspan="6" class="tabela-vazia">Nenhum depoimento neste filtro.</td></tr>`;
+    return;
+  }
+
+  corpo.innerHTML = depoimentos.map((d) => {
+    const [rotulo, selo] = ROTULOS_DEPOIMENTO[d.status];
+    return `
+    <tr>
+      <td>
+        <strong>${escaparHtml(d.nome)}</strong>
+        <span class="cel-sub">${escaparHtml(d.turma)}</span>
+        ${d.usuario_email ? `<span class="cel-sub">${escaparHtml(d.usuario_email)}</span>` : ''}
+      </td>
+      <td>${'★'.repeat(d.nota)}${'☆'.repeat(5 - d.nota)}</td>
+      <td class="cel-mensagem">${escaparHtml(d.mensagem)}</td>
+      <td>${formatarData(d.criado_em)}</td>
+      <td><span class="selo selo--${selo}">${rotulo}</span></td>
+      <td class="cel-acoes">
+        ${d.status !== 'aprovado' ? `<button class="mini-btn" data-aprovar="${d.id}">Aprovar</button>` : ''}
+        ${d.status !== 'recusado' ? `<button class="mini-btn mini-btn--perigo" data-recusar="${d.id}">Recusar</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
 }

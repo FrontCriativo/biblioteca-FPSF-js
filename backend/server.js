@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolverRota, ErroHttp } from './rotas.js';
+import { resolverRota, ErroHttp, apagarEnviosDepoimentoVencidos } from './rotas.js';
 import { expirarReservasVencidas } from './repositorio.js';
 import { apagarSessoesVencidas, apagarFalhasLoginVencidas } from './auth.js';
 
@@ -47,7 +47,13 @@ async function lerCorpo(req, limite = LIMITE_CORPO) {
 }
 
 async function servirArquivo(res, caminhoUrl) {
-  const relativo = normalize(decodeURIComponent(caminhoUrl)).replace(/^(\.\.[/\\])+/, '');
+  let relativo;
+  try {
+    relativo = normalize(decodeURIComponent(caminhoUrl)).replace(/^(\.\.[/\\])+/, '');
+  } catch {
+    // "%E0%A4%A" e afins: escape de URL malformado.
+    return responderJson(res, 400, { erro: 'Requisição inválida.' });
+  }
   let destino = join(RAIZ_FRONT, relativo);
 
   // Impede escapar da pasta frontend/ via caminhos como /../backend/db/biblioteca.db
@@ -73,7 +79,8 @@ async function servirArquivo(res, caminhoUrl) {
   }
 }
 
-const servidor = createServer(async (req, res) => {
+async function atender(req, res) {
+  // Lança com Host inválido ("a b"): quem trata é o catch de createServer.
   const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
 
   if (!url.pathname.startsWith('/api/')) {
@@ -81,10 +88,10 @@ const servidor = createServer(async (req, res) => {
     return servirArquivo(res, caminho);
   }
 
-  const rota = resolverRota(req.method, url.pathname);
-  if (!rota) return responderJson(res, 404, { erro: 'Rota não encontrada.' });
-
   try {
+    const rota = resolverRota(req.method, url.pathname);
+    if (!rota) return responderJson(res, 404, { erro: 'Rota não encontrada.' });
+
     expirarReservasVencidas();
     const limite = url.pathname === '/api/admin/capas' ? LIMITE_CORPO_UPLOAD : LIMITE_CORPO;
     const corpo = req.method === 'GET' || req.method === 'DELETE' ? {} : await lerCorpo(req, limite);
@@ -97,6 +104,23 @@ const servidor = createServer(async (req, res) => {
       erro: status === 500 ? 'Erro interno do servidor.' : erro.message,
     });
   }
+}
+
+// O handler é async: um erro solto aqui viraria rejeição não tratada e derrubaria
+// o processo. Nenhuma requisição, por mais estranha, pode tirar o site do ar.
+const servidor = createServer(async (req, res) => {
+  try {
+    await atender(req, res);
+  } catch (erro) {
+    console.error('Requisição recusada:', erro.message);
+    if (!res.headersSent) responderJson(res, 400, { erro: 'Requisição inválida.' });
+    else res.end();
+  }
+});
+
+// Rede de segurança: registra no log em vez de encerrar o processo.
+process.on('unhandledRejection', (motivo) => {
+  console.error('Promessa rejeitada sem tratamento:', motivo);
 });
 
 // Faxina: sessões vencidas saem do banco na inicialização e depois a cada hora.
@@ -104,6 +128,7 @@ function limparVencidos() {
   try {
     const sessoes = apagarSessoesVencidas();
     apagarFalhasLoginVencidas();
+    apagarEnviosDepoimentoVencidos();
     if (sessoes) console.log(`  ${sessoes} sessão(ões) vencida(s) apagada(s).`);
   } catch (erro) {
     console.error('Erro ao apagar sessões vencidas:', erro);

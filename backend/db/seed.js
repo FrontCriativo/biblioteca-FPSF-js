@@ -88,9 +88,10 @@ transacao(() => {
     }
   }
 
+  // Senha padrão é pública (está neste arquivo): a conta já nasce obrigada a trocá-la.
   const inserirUsuario = db.prepare(`
-    INSERT INTO usuarios (nome, email, senha_hash, papel, turma)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO usuarios (nome, email, senha_hash, papel, turma, trocar_senha)
+    VALUES (?, ?, ?, ?, ?, 1)
     ON CONFLICT(email) DO NOTHING
   `);
   for (const [nome, email, senha, papel, turma] of USUARIOS) {
@@ -103,5 +104,6 @@ console.log(`  ${MATERIAS.length} matérias, ${LIVROS.length} livros, ${USUARIOS
 console.log('\n  Contas criadas com senha padrão (se ainda não existiam):');
 console.log('    Admin:  admin@fpsf.edu.br / admin123');
 console.log('    Aluno:  beatriz.lima@fpsf.edu.br / aluno123');
-console.log('\n  ATENÇÃO: troque essas senhas padrão antes de colocar o site no ar.');
-console.log('  Qualquer pessoa que leia este código consegue entrar com elas.\n');
+console.log('\n  No primeiro acesso, cada conta é levada a trocar a senha padrão.');
+console.log('  Faça isso antes de colocar o site no ar: qualquer pessoa que leia');
+console.log('  este código consegue entrar com elas.\n');

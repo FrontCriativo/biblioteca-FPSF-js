@@ -20,6 +20,8 @@ export const api = {
   eu: () => pedir('/eu'),
   entrar: (email, senha) => pedir('/login', { metodo: 'POST', corpo: { email, senha } }),
   sair: () => pedir('/logout', { metodo: 'POST' }),
+  trocarSenha: (senhaAtual, novaSenha) =>
+    pedir('/eu/senha', { metodo: 'POST', corpo: { senha_atual: senhaAtual, nova_senha: novaSenha } }),
 
   materias: () => pedir('/materias'),
   livros: ({ materia, busca } = {}) => {
@@ -50,6 +52,15 @@ export const api = {
   enviarCapa: (nome, dados) => pedir('/admin/capas', { metodo: 'POST', corpo: { nome, dados } }),
   usuarios: () => pedir('/admin/usuarios'),
   criarUsuario: (dados) => pedir('/admin/usuarios', { metodo: 'POST', corpo: dados }),
+
+  depoimentos: () => pedir('/depoimentos'),
+  enviarDepoimento: (dados) => pedir('/depoimentos', { metodo: 'POST', corpo: dados }),
+  depoimentosAdmin: (status) => {
+    const sufixo = status && status !== 'todos' ? `?status=${status}` : '';
+    return pedir(`/admin/depoimentos${sufixo}`);
+  },
+  aprovarDepoimento: (id) => pedir(`/admin/depoimentos/${id}/aprovar`, { metodo: 'POST' }),
+  recusarDepoimento: (id) => pedir(`/admin/depoimentos/${id}/recusar`, { metodo: 'POST' }),
 };
 
 export function escaparHtml(texto) {
@@ -81,6 +92,26 @@ export function cartaoLivro(livro) {
       <span class="book__author">${escaparHtml(livro.autor)}</span>
       <span class="disp-tag ${esgotado ? 'disp-tag--fora' : 'disp-tag--ok'}">${rotulo}</span>
     </a>`;
+}
+
+const ESTRELA_VAZIA = 'assets/estrela.png';
+const ESTRELA_CHEIA = 'assets/depoimentoPreenchido.png';
+
+/** Cartão de depoimento aprovado (página inicial e página de depoimentos). */
+export function cartaoDepoimento({ nome, turma, mensagem, nota }) {
+  const estrelas = [1, 2, 3, 4, 5].map((n) => (n <= nota
+    ? `<img class="estrela estrela--cheia" src="${ESTRELA_CHEIA}" alt="">`
+    : `<img class="estrela" src="${ESTRELA_VAZIA}" alt="">`)).join('');
+
+  return `
+    <div class="quote-card">
+      <div class="quote-card__stars" role="img" aria-label="Nota ${Number(nota)} de 5">${estrelas}</div>
+      <p>${escaparHtml(mensagem)}</p>
+      <div class="quote-card__who">
+        <img src="assets/userRoxo.png" alt="">
+        <div><strong>${escaparHtml(nome)}</strong><span>${escaparHtml(turma)}</span></div>
+      </div>
+    </div>`;
 }
 
 export const ROTULOS_STATUS = {
@@ -148,6 +179,14 @@ export async function montarSessaoNavbar() {
     usuario = null;
   }
 
+  const paginaAtual = location.pathname.split('/').pop();
+
+  // Senha provisória: o resto do site fica fechado até a troca.
+  if (usuario?.trocar_senha && paginaAtual !== 'trocar-senha.html') {
+    location.replace('trocar-senha.html');
+    return new Promise(() => {}); // a página para aqui enquanto o navegador muda de endereço
+  }
+
   const acoes = document.querySelector('.nav-actions');
   if (!acoes) return usuario;
 
@@ -167,12 +206,14 @@ export async function montarSessaoNavbar() {
     if (ehAdmin) {
       links.querySelectorAll('a[href="index.html"], a[href="contato.html"]').forEach((a) => a.closest('li')?.remove());
     }
-    const paginaAtual = location.pathname.split('/').pop();
     const itens = [['minhas-reservas.html', 'Minhas reservas']];
     if (ehAdmin) itens.push(['admin.html', 'Admin']);
-    itens.forEach(([href, texto]) => {
+    // No celular o menu do usuário esconde o link: ele entra no menu sanduíche.
+    itens.push(['trocar-senha.html', 'Trocar senha', 'nav-links__so-mobile']);
+    itens.forEach(([href, texto, classe]) => {
       if (links.querySelector(`a[href="${href}"]`)) return;
       const li = document.createElement('li');
+      if (classe) li.className = classe;
       li.innerHTML = `<a href="${href}"${paginaAtual === href ? ' class="active"' : ''}>${texto}</a>`;
       links.appendChild(li);
     });
@@ -182,6 +223,7 @@ export async function montarSessaoNavbar() {
   menu.className = 'nav-user';
   menu.innerHTML = `
     <span class="nav-user__nome">${escaparHtml(usuario.nome.split(' ')[0])}</span>
+    <a class="nav-user__link" href="trocar-senha.html">Trocar senha</a>
     <button class="btn btn--ghost-light" type="button" data-sair>Sair</button>
   `;
   acoes.insertBefore(menu, acoes.querySelector('.nav-toggle'));

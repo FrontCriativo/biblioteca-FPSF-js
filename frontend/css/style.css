@@ -762,6 +762,8 @@ button, input, textarea{
   gap: 24px;
 }
 .testimonials__grid .quote-card p{ font-size: 15px; }
+.testimonials__grid > .empty-state{ grid-column: 1 / -1; }
+.empty-state a{ color: var(--lilac-deep); font-weight: 700; }
 
 @media (max-width: 900px){
   .testimonials__grid{ grid-template-columns: 1fr 1fr; }
@@ -783,7 +785,9 @@ button, input, textarea{
   color: var(--heading);
 }
 .nota-input__estrelas{ display: inline-flex; gap: 8px; vertical-align: middle; }
-.nota-input__estrelas label{ display: inline-flex; margin: 0; cursor: pointer; }
+/* position: relative prende o radio .sr-only (absolute) dentro da estrela;
+   sem isso ele ia parar fora da tela e criava rolagem horizontal. */
+.nota-input__estrelas label{ position: relative; display: inline-flex; margin: 0; cursor: pointer; }
 .nota-input .estrela{ width: 30px; height: 30px; border-radius: 6px; }
 .nota-input input:focus-visible + .estrela{ outline: 2px solid var(--lilac); outline-offset: 3px; }
 .nota-input__texto{ margin-left: 12px; font-size: 13.5px; color: var(--ink-soft); vertical-align: middle; }
@@ -840,6 +844,7 @@ button, input, textarea{
   font-size: 14.5px;
 }
 .contact-list img{ width: 18px; height: 18px; margin-top: 2px; }
+.contato-nota{ font-size: 13.5px; color: var(--ink-soft); margin-bottom: 16px; }
 .contact-list strong{ display: block; font-size: 13px; color: #A9AEE0; font-weight: 600; margin-bottom: 2px;}
 
 .form-card{
@@ -1089,9 +1094,36 @@ button, input, textarea{
   font-size: 13.5px;
   font-weight: 600;
 }
+.nav-links__so-mobile{ display: none; }
+
+/* Mensagem de retorno dos formulários (sucesso em lilás, erro em vermelho). */
+.form-feedback{
+  margin-top: 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--lilac-deep);
+}
+.form-feedback--erro{ color: var(--vermelho-texto); }
+.form-feedback a{ color: inherit; text-decoration: underline; }
+
+/* =========================================================
+   Trocar senha
+   ========================================================= */
+.troca-senha{ padding-block: 50px 90px; }
+.troca-senha .form-card{ max-width: 520px; margin-inline: auto; }
+.troca-senha__aviso{
+  background: var(--ambar-fundo);
+  color: var(--ambar-texto);
+  border-radius: var(--radius-s);
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 22px;
+}
 
 @media (max-width: 900px){
   .nav-user__link, .nav-user__nome{ display: none; }
+  .nav-links__so-mobile{ display: list-item; }
   .nav-links.is-aberto{
     display: flex;
     flex-direction: column;
@@ -1344,6 +1376,8 @@ button, input, textarea{
 .cel-livro span{ font-size: 12px; color: var(--ink-soft); }
 .cel-sub{ display: block; font-size: 12px; color: var(--ink-soft); }
 .cel-acoes{ display: flex; gap: 8px; flex-wrap: wrap; }
+.cel-mensagem{ min-width: 260px; max-width: 420px; white-space: pre-line; }
+.admin-ajuda{ font-size: 13.5px; color: var(--ink-soft); margin: -8px 0 18px; }
 
 .mini-btn{
   border: 1.5px solid var(--line);

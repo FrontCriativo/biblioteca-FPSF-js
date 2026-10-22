@@ -55,6 +55,7 @@
     <button class="admin-tab is-active" data-aba="reservas">Reservas</button>
     <button class="admin-tab" data-aba="acervo">Acervo</button>
     <button class="admin-tab" data-aba="usuarios">Usuários</button>
+    <button class="admin-tab" data-aba="depoimentos">Depoimentos</button>
   </div>
 
   <section data-painel="reservas">
@@ -164,7 +165,7 @@
       <div class="field-row">
         <div class="field">
           <label for="u-senha">Senha provisória</label>
-          <input id="u-senha" name="senha" type="password" minlength="6" required>
+          <input id="u-senha" name="senha" type="password" minlength="8" required>
         </div>
         <div class="field">
           <label for="u-turma">Turma</label>
@@ -187,6 +188,30 @@
           <tr><th>Nome</th><th>E-mail</th><th>Turma</th><th>Perfil</th><th>Reservas ativas</th></tr>
         </thead>
         <tbody data-tabela-usuarios></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section data-painel="depoimentos" hidden>
+    <div class="admin-bloco__head">
+      <h2>Depoimentos</h2>
+      <label class="admin-filtro">
+        Mostrar
+        <select data-filtro-depoimentos>
+          <option value="pendente">Aguardando moderação</option>
+          <option value="aprovado">Aprovados</option>
+          <option value="recusado">Recusados</option>
+          <option value="todos">Todos</option>
+        </select>
+      </label>
+    </div>
+    <p class="admin-ajuda">Só os depoimentos aprovados aparecem no site. Um aprovado pode ser recusado depois, e vice-versa.</p>
+    <div class="tabela-wrap">
+      <table class="tabela">
+        <thead>
+          <tr><th>Autor</th><th>Nota</th><th>Depoimento</th><th>Enviado</th><th>Situação</th><th>Ações</th></tr>
+        </thead>
+        <tbody data-tabela-depoimentos></tbody>
       </table>
     </div>
   </section>

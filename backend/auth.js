@@ -30,10 +30,21 @@ export function encerrarSessao(token) {
   db.prepare('DELETE FROM sessoes WHERE token = ?').run(token);
 }
 
+/** Desloga o usuário em todos os aparelhos, menos na sessão `manter` (se informada). */
+export function encerrarSessoesDoUsuario(usuarioId, manter = null) {
+  db.prepare('DELETE FROM sessoes WHERE usuario_id = ? AND token IS NOT ?').run(usuarioId, manter);
+}
+
+/** Grava uma nova senha. trocarSenha = true obriga a trocá-la no próximo acesso. */
+export function definirSenha(usuarioId, senha, { trocarSenha }) {
+  db.prepare('UPDATE usuarios SET senha_hash = ?, trocar_senha = ? WHERE id = ?')
+    .run(criarHashSenha(senha), trocarSenha ? 1 : 0, usuarioId);
+}
+
 export function usuarioDaSessao(token) {
   if (!token) return null;
   return db.prepare(
-    `SELECT u.id, u.nome, u.email, u.papel, u.turma
+    `SELECT u.id, u.nome, u.email, u.papel, u.turma, u.trocar_senha
        FROM sessoes s
        JOIN usuarios u ON u.id = s.usuario_id
       WHERE s.token = ? AND s.expira_em > datetime('now')`
@@ -45,7 +56,12 @@ export function lerCookie(req, nome) {
   if (!bruto) return null;
   for (const parte of bruto.split(';')) {
     const [chave, ...resto] = parte.trim().split('=');
-    if (chave === nome) return decodeURIComponent(resto.join('='));
+    if (chave !== nome) continue;
+    try {
+      return decodeURIComponent(resto.join('='));
+    } catch {
+      return null; // cookie malformado vale como "sem sessão", e não como erro 500
+    }
   }
   return null;
 }
@@ -69,6 +85,9 @@ export const cookieSessaoExpirado = `sessao=; HttpOnly; SameSite=Strict; Path=/;
 // Limite de tentativas de login erradas, por e-mail e por IP, numa janela de 15 minutos.
 // Fica em memória: reiniciar o servidor zera os contadores.
 const MAX_TENTATIVAS_LOGIN = 5;
+// Os computadores da escola saem todos pelo mesmo IP: com o limite do e-mail,
+// um aluno errando a senha travava a escola inteira. O do IP só pega ataque em massa.
+const MAX_TENTATIVAS_IP = 50;
 const JANELA_TENTATIVAS_MS = 15 * 60 * 1000;
 const falhasLogin = new Map(); // chave → { contagem, inicio }
 
@@ -86,7 +105,9 @@ function falhasRecentes(chave, agora = Date.now()) {
 
 /** true se o e-mail ou o IP já errou a senha o máximo de vezes na janela atual. */
 export function loginBloqueado(email, ip) {
-  return chavesLogin(email, ip).some((chave) => falhasRecentes(chave) >= MAX_TENTATIVAS_LOGIN);
+  const [chaveEmail, chaveIp] = chavesLogin(email, ip);
+  return falhasRecentes(chaveEmail) >= MAX_TENTATIVAS_LOGIN
+    || falhasRecentes(chaveIp) >= MAX_TENTATIVAS_IP;
 }
 
 export function registrarFalhaLogin(email, ip) {

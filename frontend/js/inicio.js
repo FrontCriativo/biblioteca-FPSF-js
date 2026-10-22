@@ -1,6 +1,6 @@
 // Página inicial: prateleiras montadas a partir do acervo real.
 
-import { api, cartaoLivro, escaparHtml, montarSessaoNavbar } from './api.js';
+import { api, cartaoLivro, cartaoDepoimento, escaparHtml, montarSessaoNavbar } from './api.js';
 
 // Cada prateleira junta os livros de uma ou mais matérias.
 // Prateleira sem nenhum livro não aparece.
@@ -60,6 +60,23 @@ async function contarLivrosPorMateria() {
   }
 }
 
+// Os depoimentos aprovados mais recentes. Sem nenhum (ou se a API falhar), a seção fica escondida.
+const DEPOIMENTOS_NA_HOME = 3;
+
+async function desenharDepoimentos() {
+  let depoimentos;
+  try {
+    depoimentos = await api.depoimentos();
+  } catch {
+    return;
+  }
+  if (!depoimentos.length) return;
+  document.querySelector('[data-depoimentos]').innerHTML =
+    depoimentos.slice(0, DEPOIMENTOS_NA_HOME).map(cartaoDepoimento).join('');
+  document.querySelector('[data-teaser-depoimentos]').hidden = false;
+}
+
 montarSessaoNavbar();
 desenharPrateleiras();
 contarLivrosPorMateria();
+desenharDepoimentos();

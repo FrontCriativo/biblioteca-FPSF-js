@@ -47,6 +47,22 @@ const MIGRACOES = [
       db.exec('ALTER TABLE reservas ADD COLUMN devolver_ate TEXT');
     }
   },
+  // 3 — troca de senha obrigatória. Contas que já existiam ficam com 0:
+  // não dá para saber se a senha delas ainda é a padrão.
+  () => {
+    if (!colunaExiste('usuarios', 'trocar_senha')) {
+      db.exec('ALTER TABLE usuarios ADD COLUMN trocar_senha INTEGER NOT NULL DEFAULT 0');
+    }
+  },
+  // 4 — depoimentos moderados. Tabela nova: o CREATE TABLE IF NOT EXISTS do
+  // schema.sql já a cria ao abrir qualquer banco, antes das migrações. Aqui só
+  // se confere que ela está lá, para a versão do banco registrar a mudança.
+  () => {
+    const existe = db.prepare(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'depoimentos'"
+    ).get();
+    if (!existe) throw new Error('Tabela depoimentos ausente: confira o schema.sql.');
+  },
 ];
 
 function migrar() {
