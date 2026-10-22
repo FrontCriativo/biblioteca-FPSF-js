@@ -41,5 +41,25 @@ async function desenharPrateleiras() {
   }).join('');
 }
 
+// Cada botão de "Explore por matéria" ganha a quantidade de livros da matéria.
+async function contarLivrosPorMateria() {
+  let materias;
+  try {
+    materias = await api.materias();
+  } catch {
+    return; // sem a contagem, os botões continuam funcionando
+  }
+  for (const m of materias) {
+    const botao = document.querySelector(`.subject-chip[href="catalogo.html#${m.slug}"]`);
+    if (!botao) continue;
+    const qtd = document.createElement('span');
+    qtd.className = 'subject-chip__qtd';
+    qtd.textContent = m.total_livros === 0 ? 'em breve'
+      : `${m.total_livros} ${m.total_livros === 1 ? 'livro' : 'livros'}`;
+    botao.appendChild(qtd);
+  }
+}
+
 montarSessaoNavbar();
 desenharPrateleiras();
+contarLivrosPorMateria();

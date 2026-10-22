@@ -370,22 +370,22 @@ button, input, textarea{
   margin-bottom: 22px;
 }
 .subjects__head h2{ font-size: 24px; }
+/* Desktop: os botões quebram em várias linhas. Celular (≤640px): uma linha com rolagem. */
 .subjects__row{
   display: flex;
-  gap: 16px;
-  overflow-x: auto;
+  flex-wrap: wrap;
+  gap: 12px;
   padding-bottom: 14px;
-  scrollbar-width: thin;
 }
 .subject-chip{
   flex: 0 0 auto;
-  width: 108px;
+  width: 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
   text-align: center;
-  padding: 16px 8px;
+  padding: 16px 4px;
   border-radius: var(--radius-m);
   border: 1px solid var(--line);
   background: var(--card);
@@ -405,6 +405,21 @@ button, input, textarea{
 .subject-chip.is-active{
   border-color: var(--lilac);
   background: var(--lilac-tint);
+}
+/* Quantidade de livros da matéria, preenchida por inicio.js. */
+.subject-chip .subject-chip__qtd{
+  margin-top: -6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 640px){
+  .subjects__row{
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
 }
 
 /* =========================================================
@@ -559,10 +574,13 @@ button, input, textarea{
 
 .chip-filter{
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
-  overflow-x: auto;
   padding-bottom: 6px;
   margin-bottom: 34px;
+}
+@media (max-width: 640px){
+  .chip-filter{ flex-wrap: nowrap; overflow-x: auto; }
 }
 .chip{
   flex: 0 0 auto;
@@ -612,6 +630,11 @@ button, input, textarea{
   background: var(--paper-dim);
   padding: 3px 10px;
   border-radius: 999px;
+}
+
+.em-breve{
+  font-size: 13.5px;
+  color: var(--ink-soft);
 }
 
 .empty-state{
@@ -885,8 +908,8 @@ button, input, textarea{
   background: #000;
   color: #fff;
 }
-:root[data-tema="escuro"] .search-form{ background: #000; }
-:root[data-tema="escuro"] .search-form input{ color: #fff; }
+/* A caixa de busca usa a superfície do tema (--card), com borda para destacar do fundo. */
+:root[data-tema="escuro"] .search-form{ border: 1px solid var(--line); }
 :root[data-tema="escuro"] :is(input, textarea)::placeholder{ color: #8A8DA6; }
 /* O preenchimento automático do Chrome pinta o campo de claro; o inset devolve o preto. */
 :root[data-tema="escuro"] input:-webkit-autofill{

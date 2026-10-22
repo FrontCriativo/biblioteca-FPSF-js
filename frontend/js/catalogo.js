@@ -4,8 +4,15 @@ const grade = document.querySelector('[data-catalogo]');
 const filtros = document.querySelector('[data-filtros]');
 const campoBusca = document.querySelector('[data-catalog-search]');
 
-let materiaAtiva = location.hash.slice(1) || 'todos';
+let materias = [];
+let materiaAtiva = 'todos';
 let termoBusca = '';
+
+/** Matéria indicada no hash da URL (catalogo.html#ciencias); hash desconhecido vale "todos". */
+function materiaDoHash() {
+  const slug = decodeURIComponent(location.hash.slice(1));
+  return materias.some((m) => m.slug === slug) ? slug : 'todos';
+}
 
 function blocoMateria(materia, livros) {
   const plural = livros.length === 1 ? 'livro' : 'livros';
@@ -35,11 +42,13 @@ function blocoVazio(materia) {
     </div>`;
 }
 
+// Na visão "Todos", as matérias sem livros viram uma única linha no fim.
+function linhaEmBreve(vazias) {
+  return `<p class="em-breve">Em breve: ${vazias.map((m) => escaparHtml(m.nome)).join(', ')}.</p>`;
+}
+
 async function desenhar() {
-  const [materias, livros] = await Promise.all([
-    api.materias(),
-    api.livros({ materia: materiaAtiva, busca: termoBusca }),
-  ]);
+  const livros = await api.livros({ materia: materiaAtiva, busca: termoBusca });
 
   const porMateria = new Map();
   for (const livro of livros) {
@@ -47,24 +56,38 @@ async function desenhar() {
     porMateria.get(livro.materia_slug).push(livro);
   }
 
-  const visiveis = materiaAtiva === 'todos'
-    ? materias
-    : materias.filter((m) => m.slug === materiaAtiva);
-
   if (termoBusca && livros.length === 0) {
     grade.innerHTML = `<div class="empty-state">Nenhum título encontrado para “${escaparHtml(termoBusca)}”.</div>`;
     return;
   }
 
-  grade.innerHTML = visiveis.map((materia) => {
-    const doGrupo = porMateria.get(materia.slug) ?? [];
-    if (doGrupo.length) return blocoMateria(materia, doGrupo);
-    return termoBusca ? '' : blocoVazio(materia);
-  }).join('');
+  // Uma matéria específica: a API já devolveu só os livros dela.
+  if (materiaAtiva !== 'todos') {
+    const materia = materias.find((m) => m.slug === materiaAtiva);
+    grade.innerHTML = livros.length ? blocoMateria(materia, livros) : blocoVazio(materia);
+    return;
+  }
+
+  const comLivros = materias.filter((m) => porMateria.has(m.slug));
+  const vazias = materias.filter((m) => !porMateria.has(m.slug));
+  grade.innerHTML = comLivros.map((m) => blocoMateria(m, porMateria.get(m.slug))).join('')
+    + (vazias.length && !termoBusca ? linhaEmBreve(vazias) : '');
 }
 
-async function montarFiltros() {
-  const materias = await api.materias();
+function marcarChipAtivo() {
+  filtros.querySelectorAll('.chip').forEach((c) => {
+    c.classList.toggle('is-active', c.dataset.subject === materiaAtiva);
+  });
+}
+
+function selecionarMateria(slug) {
+  if (slug === materiaAtiva) return;
+  materiaAtiva = slug;
+  marcarChipAtivo();
+  desenhar();
+}
+
+function montarFiltros() {
   filtros.innerHTML = [
     `<button class="chip${materiaAtiva === 'todos' ? ' is-active' : ''}" data-subject="todos">Todos</button>`,
     ...materias.map((m) => `
@@ -73,14 +96,28 @@ async function montarFiltros() {
       </button>`),
   ].join('');
 
+  // O filtro vai para o hash da URL (catalogo.html#ciencias), para o link poder ser
+  // copiado e o "voltar" do navegador desfazer o filtro.
   filtros.addEventListener('click', (evento) => {
     const chip = evento.target.closest('.chip');
     if (!chip) return;
-    materiaAtiva = chip.dataset.subject;
-    filtros.querySelectorAll('.chip').forEach((c) => c.classList.toggle('is-active', c === chip));
-    desenhar();
+    const slug = chip.dataset.subject;
+    const hash = slug === 'todos' ? '' : `#${encodeURIComponent(slug)}`;
+    if (location.hash !== hash) history.pushState(null, '', location.pathname + location.search + hash);
+    selecionarMateria(slug);
   });
 }
+
+// Links do rodapé (catalogo.html#historia) clicados com o catálogo já aberto, e o
+// "voltar"/"avançar" do navegador, só mudam o hash: a página não recarrega.
+function aoMudarHash() {
+  const slug = materiaDoHash();
+  if (slug === materiaAtiva) return;
+  selecionarMateria(slug);
+  filtros.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.addEventListener('hashchange', aoMudarHash);
+window.addEventListener('popstate', aoMudarHash);
 
 let idDebounce;
 campoBusca?.addEventListener('input', () => {
@@ -98,5 +135,7 @@ if (buscaInicial && campoBusca) {
 }
 
 montarSessaoNavbar();
-await montarFiltros();
+materias = await api.materias();
+materiaAtiva = materiaDoHash();
+montarFiltros();
 await desenhar();
