@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  var salvo = localStorage.getItem('tema');
+  var escuro = salvo ? salvo === 'escuro' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-tema', escuro ? 'escuro' : 'claro');
+})();
+</script>
+<title>Biblioteca Virtual — Escola Prof. Francisco Pereira de Souza Filho</title>
+<link rel="icon" href="assets/icon-fpsf.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a class="brand" href="index.html">
+      <img src="assets/fpsf.jpg" alt="Biblioteca Virtual — página inicial">
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html" class="active">Início</a></li>
+        <li><a href="catalogo.html">Catálogo</a></li>
+        <li><a href="depoimentos.html">Depoimentos</a></li>
+        <li><a href="contato.html">Fale conosco</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" type="button" data-toggle-tema aria-label="Alternar modo escuro"><span aria-hidden="true">🌙</span></button>
+      <a href="login.html" class="btn btn--lilac">Entrar</a>
+      <button class="nav-toggle" aria-label="Abrir menu"><span></span></button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <div>
+      <p class="hero__eyebrow-free">Biblioteca Virtual</p>
+      <h1>Cada capa aqui esconde um mundo novo pra descobrir.</h1>
+      <p class="lede">Reunimos os livros das nossas estantes por matéria, pra você achar a próxima leitura em poucos cliques — de Ciências a Literatura, de Filosofia a Música.</p>
+      <form class="search-form" role="search" action="catalogo.html" method="get">
+        <img src="assets/lupa.png" alt="">
+        <input type="search" name="busca" placeholder="Busque por título ou autor">
+        <button type="submit">Buscar</button>
+      </form>
+    </div>
+    <div class="hero__stack" aria-hidden="true">
+      <div class="hero__card hero__card--1"><img src="assets/oPequenoPrincipe.jpg" alt=""></div>
+      <div class="hero__card hero__card--2"><img src="assets/domQuixote.jpg" alt=""></div>
+      <div class="hero__card hero__card--3"><img src="assets/vidasSecas.jpg" alt=""></div>
+    </div>
+  </div>
+</section>
+
+<section class="subjects container">
+  <div class="subjects__head">
+    <h2>Explore por matéria</h2>
+  </div>
+  <div class="subjects__row">
+    <a class="subject-chip" href="catalogo.html#literatura"><img src="assets/livro.png" alt="">Literatura</a>
+    <a class="subject-chip" href="catalogo.html#matematica"><img src="assets/matematica.png" alt="">Matemática</a>
+    <a class="subject-chip" href="catalogo.html#historia"><img src="assets/historia.png" alt="">História</a>
+    <a class="subject-chip" href="catalogo.html#geografia"><img src="assets/geografia.png" alt="">Geografia</a>
+    <a class="subject-chip" href="catalogo.html#ciencias"><img src="assets/ciencias.png" alt="">Ciências</a>
+    <a class="subject-chip" href="catalogo.html#filosofia"><img src="assets/filosofia.png" alt="">Filosofia</a>
+    <a class="subject-chip" href="catalogo.html#artes"><img src="assets/artes.png" alt="">Artes</a>
+    <a class="subject-chip" href="catalogo.html#musica"><img src="assets/musica.png" alt="">Música</a>
+    <a class="subject-chip" href="catalogo.html#tecnologia"><img src="assets/tecnologia.png" alt="">Tecnologia</a>
+    <a class="subject-chip" href="catalogo.html#meio-ambiente"><img src="assets/meioAmbiente.png" alt="">Meio Ambiente</a>
+  </div>
+</section>
+
+<div data-prateleiras></div>
+
+<section class="teaser">
+  <div class="container">
+    <div class="teaser__head">
+      <h2>Quem já leu, recomenda</h2>
+      <p>Alunos, professores e famílias contam como a biblioteca virtual entrou na rotina da escola.</p>
+    </div>
+    <div class="teaser__grid">
+      <div class="quote-card">
+        <div class="quote-card__stars" role="img" aria-label="Nota 5 de 5">
+          <img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt="">
+        </div>
+        <p>Antes eu só lia o que a professora passava. Agora entro no site pra escolher o próximo livro antes mesmo da aula acabar.</p>
+        <div class="quote-card__who">
+          <img src="assets/userRoxo.png" alt="">
+          <div><strong>Beatriz Lima</strong><span>Aluna do 8º ano</span></div>
+        </div>
+      </div>
+      <div class="quote-card">
+        <div class="quote-card__stars" role="img" aria-label="Nota 5 de 5">
+          <img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt="">
+        </div>
+        <p>Consigo indicar leituras por matéria em segundos e acompanhar o que cada turma anda descobrindo. Facilitou muito o meu planejamento.</p>
+        <div class="quote-card__who">
+          <img src="assets/userRoxo.png" alt="">
+          <div><strong>Prof. Marcos Andrade</strong><span>Professor de Ciências</span></div>
+        </div>
+      </div>
+      <div class="quote-card">
+        <div class="quote-card__stars" role="img" aria-label="Nota 5 de 5">
+          <img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt="">
+        </div>
+        <p>Meu filho pede pra usar o computador pra "ver os livros da escola". Nunca pediu isso pra nenhum joguinho.</p>
+        <div class="quote-card__who">
+          <img src="assets/userRoxo.png" alt="">
+          <div><strong>Sandra Oliveira</strong><span>Mãe de aluno do 6º ano</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="teaser__more">
+      <a href="depoimentos.html" class="btn btn--outline">Ver todos os depoimentos</a>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="assets/fpsf.jpg" alt="">
+        <div>
+          <strong>Escola Prof. Francisco Pereira de Souza Filho</strong>
+          <p>Biblioteca virtual criada para aproximar alunos, professores e famílias dos livros da escola.</p>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navegação</h4>
+        <ul>
+          <li><a href="index.html">Início</a></li>
+          <li><a href="catalogo.html">Catálogo</a></li>
+          <li><a href="depoimentos.html">Depoimentos</a></li>
+          <li><a href="contato.html">Fale conosco</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Matérias</h4>
+        <ul>
+          <li><a href="catalogo.html#literatura">Literatura</a></li>
+          <li><a href="catalogo.html#ciencias">Ciências</a></li>
+          <li><a href="catalogo.html#filosofia">Filosofia</a></li>
+          <li><a href="catalogo.html#historia">História</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contato</h4>
+        <ul>
+          <li><img src="assets/telefone.png" alt="">(11) 3542-9087</li>
+          <li><img src="assets/gmail.png" alt="">biblioteca@fpsf.edu.br</li>
+          <li><img src="assets/calendario.png" alt="">Seg. a sex., 7h às 17h</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Escola Prof. Francisco Pereira de Souza Filho</span>
+      <span>Protótipo visual da Biblioteca Virtual</span>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="js/inicio.js"></script>
+</body>
+</html>

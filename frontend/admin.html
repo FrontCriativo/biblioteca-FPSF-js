@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  var salvo = localStorage.getItem('tema');
+  var escuro = salvo ? salvo === 'escuro' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-tema', escuro ? 'escuro' : 'claro');
+})();
+</script>
+<title>Administração — Biblioteca Virtual FPSF</title>
+<link rel="icon" href="assets/icon-fpsf.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a class="brand" href="index.html">
+      <img src="assets/fpsf.jpg" alt="Biblioteca Virtual — página inicial">
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html">Início</a></li>
+        <li><a href="catalogo.html">Catálogo</a></li>
+        <li><a href="depoimentos.html">Depoimentos</a></li>
+        <li><a href="contato.html">Fale conosco</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" type="button" data-toggle-tema aria-label="Alternar modo escuro"><span aria-hidden="true">🌙</span></button>
+      <a href="login.html" class="btn btn--lilac">Entrar</a>
+      <button class="nav-toggle" aria-label="Abrir menu"><span></span></button>
+    </div>
+  </div>
+</header>
+
+<section class="page-header">
+  <div class="container">
+    <span class="crumb"><img src="assets/config.png" alt="">Área da coordenação</span>
+    <h1>Administração</h1>
+    <p>Acompanhe as pré-reservas, registre retiradas e devoluções, e mantenha o acervo atualizado.</p>
+  </div>
+</section>
+
+<main class="admin container" data-admin hidden>
+
+  <p class="admin-aviso" data-aviso-global style="display:none;"></p>
+
+  <div class="stat-grid" data-resumo></div>
+
+  <div class="admin-tabs">
+    <button class="admin-tab is-active" data-aba="reservas">Reservas</button>
+    <button class="admin-tab" data-aba="acervo">Acervo</button>
+    <button class="admin-tab" data-aba="usuarios">Usuários</button>
+  </div>
+
+  <section data-painel="reservas">
+    <div class="admin-bloco__head">
+      <h2>Pré-reservas</h2>
+      <label class="admin-filtro">
+        Mostrar
+        <select data-filtro-status>
+          <option value="ativa">Aguardando retirada</option>
+          <option value="retirada">Com os leitores</option>
+          <option value="devolvida">Devolvidas</option>
+          <option value="cancelada">Canceladas</option>
+          <option value="todas">Todas</option>
+        </select>
+      </label>
+    </div>
+    <div class="tabela-wrap">
+      <table class="tabela">
+        <thead>
+          <tr>
+            <th>Livro</th><th>Leitor</th><th>Reservado</th>
+            <th>Retirar até</th><th>Situação</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody data-tabela-reservas></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section data-painel="acervo" hidden>
+    <div class="admin-bloco__head"><h2>Acervo</h2></div>
+
+    <form class="form-card admin-form" data-form-livro>
+      <h3>Adicionar livro</h3>
+      <div class="field-row">
+        <div class="field">
+          <label for="novo-titulo">Título</label>
+          <input id="novo-titulo" name="titulo" required>
+        </div>
+        <div class="field">
+          <label for="novo-autor">Autor</label>
+          <input id="novo-autor" name="autor" required>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="novo-materia">Matéria</label>
+          <select id="novo-materia" name="materia_slug" required></select>
+        </div>
+        <div class="field">
+          <label for="novo-capa-arquivo">Capa do livro</label>
+          <label class="dropzone" data-dropzone>
+            <input id="novo-capa-arquivo" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+            <img class="dropzone__preview" alt="" hidden>
+            <span class="dropzone__texto">Arraste a imagem da capa aqui ou <u>clique para escolher</u></span>
+          </label>
+          <input type="hidden" name="capa" data-capa-nome>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="novo-paginas">Páginas</label>
+          <input id="novo-paginas" name="paginas" type="number" min="1">
+        </div>
+        <div class="field">
+          <label for="novo-exemplares">Quantos exemplares</label>
+          <input id="novo-exemplares" name="exemplares" type="number" min="1" value="1" required>
+        </div>
+      </div>
+      <div class="field">
+        <label for="novo-sinopse">Sinopse</label>
+        <textarea id="novo-sinopse" name="sinopse" rows="3"></textarea>
+      </div>
+      <button class="btn btn--lilac" type="submit">Adicionar ao acervo</button>
+    </form>
+
+    <div class="tabela-wrap">
+      <table class="tabela">
+        <thead>
+          <tr><th>Livro</th><th>Matéria</th><th>Exemplares</th><th>Disponíveis</th><th>Ações</th></tr>
+        </thead>
+        <tbody data-tabela-livros></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section data-painel="usuarios" hidden>
+    <div class="admin-bloco__head"><h2>Usuários</h2></div>
+
+    <form class="form-card admin-form" data-form-usuario>
+      <h3>Cadastrar usuário</h3>
+      <div class="field-row">
+        <div class="field">
+          <label for="u-nome">Nome</label>
+          <input id="u-nome" name="nome" required>
+        </div>
+        <div class="field">
+          <label for="u-email">E-mail</label>
+          <input id="u-email" name="email" type="email" required>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="u-senha">Senha provisória</label>
+          <input id="u-senha" name="senha" type="password" minlength="6" required>
+        </div>
+        <div class="field">
+          <label for="u-turma">Turma</label>
+          <input id="u-turma" name="turma" placeholder="ex.: 8º ano B">
+        </div>
+      </div>
+      <div class="field">
+        <label for="u-papel">Perfil</label>
+        <select id="u-papel" name="papel">
+          <option value="aluno">Aluno</option>
+          <option value="admin">Coordenação</option>
+        </select>
+      </div>
+      <button class="btn btn--lilac" type="submit">Cadastrar</button>
+    </form>
+
+    <div class="tabela-wrap">
+      <table class="tabela">
+        <thead>
+          <tr><th>Nome</th><th>E-mail</th><th>Turma</th><th>Perfil</th><th>Reservas ativas</th></tr>
+        </thead>
+        <tbody data-tabela-usuarios></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

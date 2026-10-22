@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  var salvo = localStorage.getItem('tema');
+  var escuro = salvo ? salvo === 'escuro' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-tema', escuro ? 'escuro' : 'claro');
+})();
+</script>
+<title>Depoimentos — Biblioteca Virtual FPSF</title>
+<link rel="icon" href="assets/icon-fpsf.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a class="brand" href="index.html">
+      <img src="assets/fpsf.jpg" alt="Biblioteca Virtual — página inicial">
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html">Início</a></li>
+        <li><a href="catalogo.html">Catálogo</a></li>
+        <li><a href="depoimentos.html" class="active">Depoimentos</a></li>
+        <li><a href="contato.html">Fale conosco</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" type="button" data-toggle-tema aria-label="Alternar modo escuro"><span aria-hidden="true">🌙</span></button>
+      <a href="login.html" class="btn btn--lilac">Entrar</a>
+      <button class="nav-toggle" aria-label="Abrir menu"><span></span></button>
+    </div>
+  </div>
+</header>
+
+<section class="page-header">
+  <div class="container">
+    <h1>Depoimentos</h1>
+    <p>Histórias de quem usa a biblioteca virtual no dia a dia — alunos, professores e famílias da nossa comunidade escolar.</p>
+  </div>
+</section>
+
+<section class="testimonials container">
+  <div class="testimonials__grid">
+
+    <div class="quote-card">
+      <div class="quote-card__stars" role="img" aria-label="Nota 5 de 5">
+        <img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt="">
+      </div>
+      <p>Antes eu só lia o que a professora passava. Agora entro no site pra escolher o próximo livro antes mesmo da aula acabar.</p>
+      <div class="quote-card__who">
+        <img src="assets/userRoxo.png" alt="">
+        <div><strong>Beatriz Lima</strong><span>Aluna do 8º ano</span></div>
+      </div>
+    </div>
+
+    <div class="quote-card">
+      <div class="quote-card__stars" role="img" aria-label="Nota 5 de 5">
+        <img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt="">
+      </div>
+      <p>Consigo indicar leituras por matéria em segundos e acompanhar o que cada turma anda descobrindo. Facilitou muito o meu planejamento.</p>
+      <div class="quote-card__who">
+        <img src="assets/userRoxo.png" alt="">
+        <div><strong>Prof. Marcos Andrade</strong><span>Professor de Ciências</span></div>
+      </div>
+    </div>
+
+    <div class="quote-card">
+      <div class="quote-card__stars" role="img" aria-label="Nota 5 de 5">
+        <img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt="">
+      </div>
+      <p>Meu filho pede pra usar o computador pra "ver os livros da escola". Nunca pediu isso pra nenhum joguinho.</p>
+      <div class="quote-card__who">
+        <img src="assets/userRoxo.png" alt="">
+        <div><strong>Sandra Oliveira</strong><span>Mãe de aluno do 6º ano</span></div>
+      </div>
+    </div>
+
+    <div class="quote-card">
+      <div class="quote-card__stars" role="img" aria-label="Nota 4 de 5">
+        <img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela" src="assets/estrela.png" alt="">
+      </div>
+      <p>Gosto de poder reler o resumo de "A República" antes da prova de Filosofia sem precisar levar o livro pra casa todo dia.</p>
+      <div class="quote-card__who">
+        <img src="assets/userRoxo.png" alt="">
+        <div><strong>Enzo Ferreira</strong><span>Aluno do 9º ano</span></div>
+      </div>
+    </div>
+
+    <div class="quote-card">
+      <div class="quote-card__stars" role="img" aria-label="Nota 5 de 5">
+        <img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt="">
+      </div>
+      <p>Uso a biblioteca virtual pra montar a lista de leitura do trimestre. É rápido mostrar as capas pra turma escolher junto comigo.</p>
+      <div class="quote-card__who">
+        <img src="assets/userRoxo.png" alt="">
+        <div><strong>Profa. Renata Costa</strong><span>Professora de Português</span></div>
+      </div>
+    </div>
+
+    <div class="quote-card">
+      <div class="quote-card__stars" role="img" aria-label="Nota 4 de 5">
+        <img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela estrela--cheia" src="assets/depoimentoPreenchido.png" alt=""><img class="estrela" src="assets/estrela.png" alt="">
+      </div>
+      <p>Achei "Vidas Secas" pela busca em menos de um minuto. Antes eu precisava esperar a bibliotecária ter um tempo livre pra me ajudar.</p>
+      <div class="quote-card__who">
+        <img src="assets/userRoxo.png" alt="">
+        <div><strong>Gabriel Souza</strong><span>Aluno do 9º ano</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="form-card depoimento-form" id="deixar-depoimento">
+    <h3>Também tem uma experiência com a biblioteca pra contar?</h3>
+    <p>Escreva seu depoimento e dê uma nota de 1 a 5 estrelas.</p>
+
+    <form data-depoimento-form>
+      <div class="field-row">
+        <div class="field">
+          <label for="dep-nome">Nome</label>
+          <input type="text" id="dep-nome" name="nome" placeholder="Seu nome completo" required>
+        </div>
+        <div class="field">
+          <label for="dep-turma">Turma ou função</label>
+          <input type="text" id="dep-turma" name="turma" placeholder="Ex.: Aluno do 8º ano" required>
+        </div>
+      </div>
+
+      <fieldset class="field nota-input">
+        <legend>Sua nota</legend>
+        <div class="nota-input__estrelas">
+          <label><input class="sr-only" type="radio" name="nota" value="1"><img class="estrela" src="assets/estrela.png" alt="1 estrela"></label>
+          <label><input class="sr-only" type="radio" name="nota" value="2"><img class="estrela" src="assets/estrela.png" alt="2 estrelas"></label>
+          <label><input class="sr-only" type="radio" name="nota" value="3"><img class="estrela" src="assets/estrela.png" alt="3 estrelas"></label>
+          <label><input class="sr-only" type="radio" name="nota" value="4"><img class="estrela" src="assets/estrela.png" alt="4 estrelas"></label>
+          <label><input class="sr-only" type="radio" name="nota" value="5"><img class="estrela" src="assets/estrela.png" alt="5 estrelas"></label>
+        </div>
+        <span class="nota-input__texto" aria-live="polite">Escolha de 1 a 5 estrelas</span>
+      </fieldset>
+
+      <div class="field">
+        <label for="dep-mensagem">Depoimento</label>
+        <textarea id="dep-mensagem" name="mensagem" placeholder="Conte como a biblioteca virtual ajuda você" required></textarea>
+      </div>
+
+      <button type="submit" class="btn btn--lilac">Enviar depoimento</button>
+      <p class="form-feedback" style="display:none; margin-top:16px; color:var(--lilac-deep); font-size:13.5px; font-weight:600;"></p>
+    </form>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="assets/fpsf.jpg" alt="">
+        <div>
+          <strong>Escola Prof. Francisco Pereira de Souza Filho</strong>
+          <p>Biblioteca virtual criada para aproximar alunos, professores e famílias dos livros da escola.</p>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navegação</h4>
+        <ul>
+          <li><a href="index.html">Início</a></li>
+          <li><a href="catalogo.html">Catálogo</a></li>
+          <li><a href="depoimentos.html">Depoimentos</a></li>
+          <li><a href="contato.html">Fale conosco</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Matérias</h4>
+        <ul>
+          <li><a href="catalogo.html#literatura">Literatura</a></li>
+          <li><a href="catalogo.html#ciencias">Ciências</a></li>
+          <li><a href="catalogo.html#filosofia">Filosofia</a></li>
+          <li><a href="catalogo.html#historia">História</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contato</h4>
+        <ul>
+          <li><img src="assets/telefone.png" alt="">(11) 3542-9087</li>
+          <li><img src="assets/gmail.png" alt="">biblioteca@fpsf.edu.br</li>
+          <li><img src="assets/calendario.png" alt="">Seg. a sex., 7h às 17h</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Escola Prof. Francisco Pereira de Souza Filho</span>
+      <span>Protótipo visual da Biblioteca Virtual</span>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="js/depoimentos.js"></script>
+</body>
+</html>

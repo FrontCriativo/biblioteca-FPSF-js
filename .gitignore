@@ -1,0 +1,5 @@
+node_modules/
+.env
+backend/db/biblioteca.db
+backend/db/biblioteca.db-shm
+backend/db/biblioteca.db-wal

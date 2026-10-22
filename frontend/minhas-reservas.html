@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  var salvo = localStorage.getItem('tema');
+  var escuro = salvo ? salvo === 'escuro' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-tema', escuro ? 'escuro' : 'claro');
+})();
+</script>
+<title>Minhas reservas — Biblioteca Virtual FPSF</title>
+<link rel="icon" href="assets/icon-fpsf.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a class="brand" href="index.html">
+      <img src="assets/fpsf.jpg" alt="Biblioteca Virtual — página inicial">
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html">Início</a></li>
+        <li><a href="catalogo.html">Catálogo</a></li>
+        <li><a href="depoimentos.html">Depoimentos</a></li>
+        <li><a href="contato.html">Fale conosco</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" type="button" data-toggle-tema aria-label="Alternar modo escuro"><span aria-hidden="true">🌙</span></button>
+      <a href="login.html" class="btn btn--lilac">Entrar</a>
+      <button class="nav-toggle" aria-label="Abrir menu"><span></span></button>
+    </div>
+  </div>
+</header>
+
+<section class="page-header">
+  <div class="container">
+    <h1>Minhas reservas</h1>
+    <p>Acompanhe os livros que você reservou. A pré-reserva vale por 3 dias — depois disso o exemplar volta para a estante.</p>
+  </div>
+</section>
+
+<main class="reservas container" data-reservas></main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom">
+      <span>© 2026 Escola Prof. Francisco Pereira de Souza Filho</span>
+      <span>Biblioteca Virtual</span>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="js/minhas-reservas.js"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  var salvo = localStorage.getItem('tema');
+  var escuro = salvo ? salvo === 'escuro' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-tema', escuro ? 'escuro' : 'claro');
+})();
+</script>
+<title>Livro — Biblioteca Virtual FPSF</title>
+<link rel="icon" href="assets/icon-fpsf.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a class="brand" href="index.html">
+      <img src="assets/fpsf.jpg" alt="Biblioteca Virtual — página inicial">
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html">Início</a></li>
+        <li><a href="catalogo.html" class="active">Catálogo</a></li>
+        <li><a href="depoimentos.html">Depoimentos</a></li>
+        <li><a href="contato.html">Fale conosco</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" type="button" data-toggle-tema aria-label="Alternar modo escuro"><span aria-hidden="true">🌙</span></button>
+      <a href="login.html" class="btn btn--lilac">Entrar</a>
+      <button class="nav-toggle" aria-label="Abrir menu"><span></span></button>
+    </div>
+  </div>
+</header>
+
+<section class="book-detail container" data-livro></section>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="assets/fpsf.jpg" alt="">
+        <div>
+          <strong>Escola Prof. Francisco Pereira de Souza Filho</strong>
+          <p>Biblioteca virtual criada para aproximar alunos, professores e famílias dos livros da escola.</p>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navegação</h4>
+        <ul>
+          <li><a href="index.html">Início</a></li>
+          <li><a href="catalogo.html">Catálogo</a></li>
+          <li><a href="depoimentos.html">Depoimentos</a></li>
+          <li><a href="contato.html">Fale conosco</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Matérias</h4>
+        <ul>
+          <li><a href="catalogo.html#literatura">Literatura</a></li>
+          <li><a href="catalogo.html#ciencias">Ciências</a></li>
+          <li><a href="catalogo.html#filosofia">Filosofia</a></li>
+          <li><a href="catalogo.html#historia">História</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contato</h4>
+        <ul>
+          <li><img src="assets/telefone.png" alt="">(11) 3542-9087</li>
+          <li><img src="assets/gmail.png" alt="">biblioteca@fpsf.edu.br</li>
+          <li><img src="assets/calendario.png" alt="">Seg. a sex., 7h às 17h</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Escola Prof. Francisco Pereira de Souza Filho</span>
+      <span>Biblioteca Virtual</span>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="js/livro.js"></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  var salvo = localStorage.getItem('tema');
+  var escuro = salvo ? salvo === 'escuro' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-tema', escuro ? 'escuro' : 'claro');
+})();
+</script>
+<title>Entrar — Biblioteca Virtual FPSF</title>
+<link rel="icon" href="assets/icon-fpsf.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a class="brand" href="index.html">
+      <img src="assets/fpsf.jpg" alt="Biblioteca Virtual — página inicial">
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html">Início</a></li>
+        <li><a href="catalogo.html">Catálogo</a></li>
+        <li><a href="depoimentos.html">Depoimentos</a></li>
+        <li><a href="contato.html">Fale conosco</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" type="button" data-toggle-tema aria-label="Alternar modo escuro"><span aria-hidden="true">🌙</span></button>
+      <button class="nav-toggle" aria-label="Abrir menu"><span></span></button>
+    </div>
+  </div>
+</header>
+
+<main class="login-page">
+  <section class="login-visual">
+    <div class="login-visual__top">
+      <img src="assets/fpsf.jpg" alt="">
+      <div>
+        <strong>Biblioteca Virtual</strong>
+        <span>Escola Prof. Francisco Pereira de Souza Filho</span>
+      </div>
+    </div>
+    <div class="login-visual__mid">
+      <h2>Sua estante pessoal, sempre por perto.</h2>
+      <p>Entre com sua conta da escola para reservar livros, acompanhar suas leituras e ver o que está disponível na biblioteca.</p>
+    </div>
+    <div class="login-visual__books" aria-hidden="true">
+      <img src="assets/oPequenoPrincipe.jpg" alt="">
+      <img src="assets/domQuixote.jpg" alt="">
+      <img src="assets/vidasSecas.jpg" alt="">
+    </div>
+  </section>
+
+  <section class="login-form-side">
+    <form class="login-form" data-form-login>
+      <h1>Entrar</h1>
+      <p>Use o e-mail cadastrado pela escola para acessar sua conta.</p>
+
+      <div class="field">
+        <label for="email">E-mail</label>
+        <input type="email" id="email" name="email" placeholder="seunome@fpsf.edu.br" required>
+      </div>
+
+      <div class="field password-field">
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" name="senha" placeholder="Digite sua senha" required>
+        <button type="button" data-toggle-password="#senha" aria-label="Mostrar senha">
+          <img src="assets/mostrar.png" alt="">
+        </button>
+      </div>
+
+      <button type="submit" class="btn btn--lilac btn--block">Entrar</button>
+
+      <p class="form-feedback" style="display:none; margin-top:16px; font-size:13.5px; font-weight:600;"></p>
+
+      <div class="login-teste">
+        <strong>Contas de teste</strong>
+        <span>Coordenação — admin@fpsf.edu.br / admin123</span>
+        <span>Aluna — beatriz.lima@fpsf.edu.br / aluno123</span>
+      </div>
+
+      <p class="login-form__foot">Ainda não tem conta? <a href="contato.html">Fale com a secretaria</a></p>
+    </form>
+  </section>
+</main>
+
+<script type="module" src="js/login.js"></script>
+</body>
+</html>
