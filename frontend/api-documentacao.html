@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<base href="/">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  var salvo = localStorage.getItem('tema');
+  var escuro = salvo ? salvo === 'escuro' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-tema', escuro ? 'escuro' : 'claro');
+})();
+</script>
+<title>Documentação da API — Biblioteca Virtual FPSF</title>
+<link rel="icon" href="assets/icon-fpsf.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a class="brand" href="index.html">
+      <img src="assets/fpsf.jpg" alt="Biblioteca Virtual — página inicial">
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html">Início</a></li>
+        <li><a href="catalogo.html">Catálogo</a></li>
+        <li><a href="depoimentos.html">Depoimentos</a></li>
+        <li><a href="contato.html">Fale conosco</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" type="button" data-toggle-tema aria-label="Alternar modo escuro"><span aria-hidden="true">🌙</span></button>
+      <a href="login.html" class="btn btn--lilac">Entrar</a>
+      <button class="nav-toggle" aria-label="Abrir menu"><span></span></button>
+    </div>
+  </div>
+</header>
+
+<section class="page-header">
+  <div class="container">
+    <h1>API v1</h1>
+    <p>Para aplicativos e outros sistemas lerem o acervo e, com um token, agirem em nome de um leitor.</p>
+  </div>
+</section>
+
+<main class="doc container">
+
+  <nav class="doc-indice" aria-label="Nesta página">
+    <a href="/api/documentacao#inicio">Como começar</a>
+    <a href="/api/documentacao#respostas">Respostas e erros</a>
+    <a href="/api/documentacao#autenticacao">Autenticação</a>
+    <a href="/api/documentacao#publicas">Rotas públicas</a>
+    <a href="/api/documentacao#conta">Conta</a>
+    <a href="/api/documentacao#expo">Aplicativo Expo</a>
+    <a href="/api/documentacao#leitor">Reservas e Quero ler</a>
+    <a href="/api/documentacao#site">API do site × v1</a>
+  </nav>
+
+  <section id="inicio">
+    <h2>Como começar</h2>
+    <p>A URL base é <code>/api/v1</code>, no mesmo endereço do site. Em desenvolvimento:
+      <code>http://localhost:3000/api/v1</code>. Corpos de requisição vão em JSON, com
+      <code>Content-Type: application/json</code>.</p>
+    <pre><code>curl http://localhost:3000/api/v1/status</code></pre>
+    <ul>
+      <li>Datas em ISO 8601, em UTC: <code>2026-11-06T12:06:14Z</code>.</li>
+      <li>Limite de 60 requisições por minuto por IP (<code>V1_LIMITE_POR_MINUTO</code>) e de 10 logins por minuto por IP, com contador próprio.</li>
+      <li>CORS liberado para as origens de <code>CORS_ORIGENS</code> (padrão: todas). Sem credenciais.</li>
+    </ul>
+  </section>
+
+  <section id="respostas">
+    <h2>Respostas e erros</h2>
+    <p>Toda resposta tem o campo <code>success</code>.</p>
+    <pre><code>{ "success": true, "data": { ... } }
+{ "success": true, "mensagem": "Perfil atualizado com sucesso.", "data": { ... } }
+{ "success": false, "erro": "Livro não encontrado." }</code></pre>
+    <table class="doc-tabela">
+      <thead><tr><th>Status</th><th>Quando</th></tr></thead>
+      <tbody>
+        <tr><td>400</td><td>JSON inválido ou URL malformada</td></tr>
+        <tr><td>401</td><td>Sem token, token inválido ou vencido, e-mail ou senha incorretos</td></tr>
+        <tr><td>403</td><td>Conta desativada, senha provisória pendente ou reserva de outra pessoa</td></tr>
+        <tr><td>404</td><td>Rota ou registro inexistente</td></tr>
+        <tr><td>405</td><td>Método não aceito na rota; o cabeçalho <code>Allow</code> lista os aceitos</td></tr>
+        <tr><td>409</td><td>Conflito de regra: livro sem exemplar, limite de reservas, renovação recusada</td></tr>
+        <tr><td>413</td><td>Corpo da requisição grande demais</td></tr>
+        <tr><td>422</td><td>Dado recusado pela validação</td></tr>
+        <tr><td>429</td><td>Limite atingido; o cabeçalho <code>Retry-After</code> diz quantos segundos esperar</td></tr>
+        <tr><td>500</td><td>Erro interno</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="autenticacao">
+    <h2>Autenticação</h2>
+    <p>Faça login, guarde o token e envie-o nas rotas protegidas no cabeçalho
+      <code>Authorization: Bearer SEU_TOKEN</code>.</p>
+    <ul>
+      <li>O token aparece uma única vez, na resposta do login. O servidor guarda só o hash dele.</li>
+      <li>Vale por 7 dias. Depois disso, faça login de novo.</li>
+      <li>Um token por dispositivo: novo login com o mesmo <code>device_name</code> (padrão <code>app</code>) substitui o anterior.</li>
+      <li>Trocar a senha, ter a senha redefinida pela coordenação ou ter a conta desativada derruba os tokens e as sessões do site. Só a credencial usada na própria requisição continua valendo.</li>
+      <li>O cookie de sessão do site não vale aqui, e o token não vale na API do site.</li>
+      <li>Conta com senha provisória (<code>trocar_senha: true</code>) pode entrar, ver o perfil, trocar a senha e sair. Qualquer outra rota protegida responde 403.</li>
+      <li>Tentativas erradas contam no mesmo bloqueio do site: 5 por e-mail e 50 por IP em 15 minutos.</li>
+    </ul>
+
+    <article class="doc-rota">
+      <h3><code>POST /api/v1/auth/login</code></h3>
+      <p>Público. Corpo: <code>email</code>, <code>senha</code> e, opcional, <code>device_name</code> (até 100 caracteres).</p>
+      <pre><code>curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"beatriz.lima@fpsf.edu.br","senha":"SUA_SENHA","device_name":"celular"}'</code></pre>
+      <pre><code>{
+  "success": true,
+  "mensagem": "Login realizado com sucesso.",
+  "data": {
+    "token": "SEU_TOKEN",
+    "usuario": { "id": 2, "nome": "Beatriz Lima", "email": "beatriz.lima@fpsf.edu.br",
+                 "papel": "aluno", "turma": "8º ano B", "trocar_senha": false }
+  }
+}</code></pre>
+      <p>E-mail inexistente e senha errada recebem a mesma resposta: 401 “E-mail ou senha incorretos.”. Conta desativada: 403.</p>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>POST /api/v1/auth/logout</code></h3>
+      <p>Token. Apaga só o token usado na requisição.</p>
+      <pre><code>{ "success": true, "mensagem": "Logout realizado com sucesso." }</code></pre>
+    </article>
+  </section>
+
+  <section id="publicas">
+    <h2>Rotas públicas</h2>
+
+    <article class="doc-rota">
+      <h3><code>GET /api/v1/status</code></h3>
+      <pre><code>{ "success": true, "data": { "aplicacao": "Biblioteca Virtual FPSF", "api": "v1",
+  "status": "online", "data_hora": "2026-11-06T12:06:14Z" } }</code></pre>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>GET /api/v1/depoimentos</code></h3>
+      <p>Só os aprovados, mais recentes primeiro.</p>
+      <pre><code>{ "success": true, "data": [ { "id": 7, "nome": "Ana", "descricao_autor": "6º ano A",
+  "texto": "A biblioteca é ótima.", "nota": 5, "criado_em": "2026-11-06T12:00:00Z" } ] }</code></pre>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>GET /api/v1/materias</code></h3>
+      <pre><code>{ "success": true, "data": [ { "slug": "filosofia", "nome": "Filosofia",
+  "icone": "filosofia.png", "total_livros": 1 } ] }</code></pre>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>GET /api/v1/materias/:slug/livros</code></h3>
+      <p>Os livros da matéria, no formato de <code>/livros</code>. Matéria inexistente: 404 “Matéria não encontrada.”.</p>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>GET /api/v1/livros</code></h3>
+      <p>Filtros opcionais: <code>?materia=slug</code> e <code>?busca=texto</code>. A busca ignora acentos e maiúsculas, no título e no autor.</p>
+      <pre><code>{ "success": true, "data": [ {
+  "id": 3, "slug": "dom-quixote", "titulo": "Dom Quixote", "autor": "Miguel de Cervantes",
+  "materia_slug": "literatura", "capa": "domQuixote.jpg", "sinopse": "...", "paginas": 863,
+  "idioma": "Português", "materia_nome": "Literatura", "materia_icone": "livro.png",
+  "total_exemplares": 2, "disponiveis": 2
+} ] }</code></pre>
+      <p>A capa fica em <code>/assets/&lt;capa&gt;</code>.</p>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>GET /api/v1/livros/:slug</code></h3>
+      <p>Um livro, no mesmo formato. Inexistente: 404 “Livro não encontrado.”.</p>
+    </article>
+  </section>
+
+  <section id="conta">
+    <h2>Conta</h2>
+
+    <article class="doc-rota">
+      <h3><code>GET /api/v1/usuario</code></h3>
+      <p>Token. Vale também com senha provisória.</p>
+      <pre><code>{ "success": true, "data": { "id": 2, "nome": "Beatriz Lima", "email": "beatriz.lima@fpsf.edu.br",
+  "papel": "aluno", "turma": "8º ano B", "trocar_senha": false } }</code></pre>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>PUT /api/v1/usuario</code></h3>
+      <h3><code>PATCH /api/v1/usuario</code></h3>
+      <p>Token. Muda só <code>nome</code> (até 80) e <code>email</code> (válido, até 120, único). O PUT exige os dois; o PATCH valida só o que vier. Outros campos são ignorados.</p>
+      <pre><code>curl -X PATCH http://localhost:3000/api/v1/usuario \
+  -H "Authorization: Bearer SEU_TOKEN" -H "Content-Type: application/json" \
+  -d '{"nome":"Bia Lima"}'</code></pre>
+      <pre><code>{ "success": true, "mensagem": "Perfil atualizado com sucesso.", "data": { ... } }</code></pre>
+      <p>E-mail de outra conta: 422 “Já existe um usuário com esse e-mail.”.</p>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>PUT /api/v1/usuario/senha</code></h3>
+      <p>Token. Vale também com senha provisória. Corpo: <code>senha_atual</code>, <code>nova_senha</code> (ao menos 8 caracteres, diferente da atual) e <code>nova_senha_confirmation</code>.</p>
+      <pre><code>{ "success": true, "mensagem": "Senha alterada com sucesso." }</code></pre>
+      <p>Senha atual errada: 422 “Senha atual incorreta.”, e a tentativa conta no bloqueio. Os outros tokens e as sessões do site caem; o token atual continua.</p>
+    </article>
+  </section>
+
+  <section id="expo">
+    <h2>Aplicativo Expo</h2>
+    <p>As mesmas operações, com os nomes de rota e de campo que o aplicativo usa.</p>
+
+    <article class="doc-rota">
+      <h3><code>POST /api/v1/login</code></h3>
+      <p>Como <code>/auth/login</code>, mas recebe <code>password</code> em vez de <code>senha</code> e devolve o token no topo.</p>
+      <pre><code>{ "success": true, "mensagem": "Login realizado com sucesso.", "token": "SEU_TOKEN", "usuario": { ... } }</code></pre>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>GET /api/v1/produto</code></h3>
+      <h3><code>GET /api/v1/produto/:id</code></h3>
+      <p>Os livros (ou um, pelo id numérico). <code>livrosDestaque</code> é <code>SIM</code> nos 6 livros cadastrados por último.</p>
+      <pre><code>{ "success": true, "data": [ {
+  "id": 3, "slug": "dom-quixote", "titulo": "Dom Quixote", "autor": "Miguel de Cervantes",
+  "categoria_produto": { "id_categoria": "literatura", "nome_categoria": "Literatura" },
+  "genero": "Literatura", "imagem": "domQuixote.jpg", "status": "disponivel",
+  "status_produto": "ATIVO", "livrosDestaque": "SIM", "descricao": "...",
+  "total_exemplares": 2, "disponiveis": 2
+} ] }</code></pre>
+      <p><code>status</code> é <code>disponivel</code> ou <code>emprestado</code>.</p>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>GET /api/v1/categoria</code></h3>
+      <p>As matérias em ordem alfabética. <code>ordem_categoria</code> é a posição na lista.</p>
+      <pre><code>{ "success": true, "data": [ { "id_categoria": "artes", "nome_categoria": "Artes",
+  "status_categoria": "ATIVO", "ordem_categoria": 1, "icone": "artes.png" } ] }</code></pre>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>PUT /api/v1/cliente/senha</code></h3>
+      <p>Igual a <code>PUT /api/v1/usuario/senha</code>.</p>
+    </article>
+  </section>
+
+  <section id="leitor">
+    <h2>Reservas e Quero ler</h2>
+    <p>Com token e com a senha já trocada. Valem as mesmas regras do site, sempre sobre as reservas de quem é dono do token.
+      Estas rotas não existem na versão Laravel.</p>
+
+    <article class="doc-rota">
+      <h3><code>GET /api/v1/reservas</code></h3>
+      <pre><code>{ "success": true, "data": [ {
+  "id": 12, "status": "retirada", "criada_em": "2026-11-01T12:00:00Z", "expira_em": "2026-11-04T12:00:00Z",
+  "encerrada_em": null, "retirada_em": "2026-11-02T12:00:00Z", "devolver_ate": "2026-11-16T12:00:00Z",
+  "renovacoes": 0, "atrasada": false, "pode_renovar": true, "novo_prazo": "2026-11-23T12:00:00Z",
+  "exemplar_codigo": "DOM-QUIX-001", "livro_slug": "dom-quixote", "titulo": "Dom Quixote",
+  "autor": "Miguel de Cervantes", "capa": "domQuixote.jpg"
+} ] }</code></pre>
+      <p><code>status</code>: <code>ativa</code> (aguardando retirada), <code>retirada</code>, <code>devolvida</code> ou <code>cancelada</code>.</p>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>POST /api/v1/reservas</code></h3>
+      <p>Corpo: <code>{ "livro_id": 3 }</code>. Responde 201 com a reserva em <code>data</code>. Até 3 reservas simultâneas por aluno; a pré-reserva vale por 3 dias.</p>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>POST /api/v1/reservas/:id/cancelar</code></h3>
+      <p>Só a própria reserva e ainda não retirada.</p>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>POST /api/v1/reservas/:id/renovar</code></h3>
+      <p>Soma 7 dias ao prazo. Só livro retirado, sem atraso e uma vez por empréstimo.</p>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>GET /api/v1/favoritos</code></h3>
+      <p>Os livros da lista “Quero ler”, no formato de <code>/livros</code>, o mais recente primeiro.</p>
+    </article>
+
+    <article class="doc-rota">
+      <h3><code>PUT /api/v1/favoritos/:livroId</code></h3>
+      <h3><code>DELETE /api/v1/favoritos/:livroId</code></h3>
+      <p>Adiciona e remove. Repetir a operação não é erro.</p>
+    </article>
+  </section>
+
+  <section id="site">
+    <h2>API do site × v1</h2>
+    <p>O site usa outra API, em <code>/api/...</code>, feita só para as páginas dele. Sistemas externos devem usar a v1.</p>
+    <table class="doc-tabela">
+      <thead><tr><th></th><th>API do site</th><th>API v1</th></tr></thead>
+      <tbody>
+        <tr><td>Autenticação</td><td>Cookie de sessão</td><td>Token Bearer</td></tr>
+        <tr><td>Sucesso</td><td>O dado direto</td><td><code>{ "success": true, "data": ... }</code></td></tr>
+        <tr><td>Erro</td><td><code>{ "erro": "..." }</code></td><td><code>{ "success": false, "erro": "..." }</code></td></tr>
+        <tr><td>Validação</td><td>400</td><td>422</td></tr>
+        <tr><td>CORS</td><td>Não</td><td>Sim</td></tr>
+        <tr><td>Datas</td><td><code>AAAA-MM-DD HH:MM:SS</code> em UTC</td><td>ISO 8601 em UTC</td></tr>
+        <tr><td>Painel da coordenação</td><td>Sim</td><td>Não</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="assets/fpsf.jpg" alt="">
+        <div>
+          <strong>Escola Prof. Francisco Pereira de Souza Filho</strong>
+          <p>Biblioteca virtual criada para aproximar alunos, professores e famílias dos livros da escola.</p>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navegação</h4>
+        <ul>
+          <li><a href="index.html">Início</a></li>
+          <li><a href="catalogo.html">Catálogo</a></li>
+          <li><a href="depoimentos.html">Depoimentos</a></li>
+          <li><a href="contato.html">Fale conosco</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Matérias</h4>
+        <ul>
+          <li><a href="catalogo.html#literatura">Literatura</a></li>
+          <li><a href="catalogo.html#ciencias">Ciências</a></li>
+          <li><a href="catalogo.html#filosofia">Filosofia</a></li>
+          <li><a href="catalogo.html#historia">História</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contato</h4>
+        <ul>
+          <li><img src="assets/telefone.png" alt="">(11) 3542-9087</li>
+          <li><img src="assets/gmail.png" alt="">biblioteca@fpsf.edu.br</li>
+          <li><img src="assets/calendario.png" alt="">Seg. a sex., 7h às 17h</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Escola Prof. Francisco Pereira de Souza Filho</span>
+      <span>Biblioteca Virtual</span>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

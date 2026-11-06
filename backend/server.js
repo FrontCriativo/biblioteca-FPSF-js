@@ -11,6 +11,8 @@ import { apagarSessoesVencidas, apagarTokensVencidos } from './auth.js';
 import { executadoDiretamente } from './execucao.js';
 
 const PORTA = Number(process.env.PORT) || 3000;
+// Sem HOST, escuta em todas as interfaces. Atrás de proxy reverso, use HOST=127.0.0.1.
+const HOST = process.env.HOST || undefined;
 const RAIZ_FRONT = fileURLToPath(new URL('../frontend/', import.meta.url));
 // A capa chega em base64 (~33% maior que o arquivo): cabe uma imagem de até ~6 MB.
 const LIMITE_CORPO_UPLOAD = 8_000_000;
@@ -27,6 +29,17 @@ const TIPOS = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
 };
+
+async function servirPagina404(res) {
+  let conteudo;
+  try {
+    conteudo = await readFile(join(RAIZ_FRONT, '404.html'));
+  } catch {
+    conteudo = '<h1>404 — Página não encontrada</h1><p><a href="/">Voltar ao início</a></p>';
+  }
+  res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(conteudo);
+}
 
 async function servirArquivo(res, caminhoUrl) {
   let relativo;
@@ -56,8 +69,7 @@ async function servirArquivo(res, caminhoUrl) {
     });
     res.end(conteudo);
   } catch {
-    res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end('<h1>404 — Página não encontrada</h1><p><a href="/">Voltar ao início</a></p>');
+    await servirPagina404(res);
   }
 }
 
@@ -69,6 +81,9 @@ async function atender(req, res) {
     const caminho = url.pathname === '/' ? '/index.html' : url.pathname;
     return servirArquivo(res, caminho);
   }
+
+  // Página HTML, e não uma rota da API: precisa vir antes do roteador de /api/.
+  if (url.pathname === '/api/documentacao') return servirArquivo(res, '/api-documentacao.html');
 
   if (url.pathname === '/api/v1' || url.pathname.startsWith('/api/v1/')) {
     return atenderV1(req, res, url);
@@ -131,8 +146,8 @@ if (executadoDiretamente(import.meta.url)) {
   limparVencidos();
   setInterval(limparVencidos, 60 * 60 * 1000).unref();
 
-  criarServidor().listen(PORTA, () => {
+  criarServidor().listen(PORTA, HOST, () => {
     console.log(`\n  Biblioteca Virtual FPSF`);
-    console.log(`  Servidor em http://localhost:${PORTA}\n`);
+    console.log(`  Servidor em http://${HOST ?? 'localhost'}:${PORTA}\n`);
   });
 }

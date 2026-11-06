@@ -47,4 +47,10 @@ export async function lerCorpo(req, limite = LIMITE_CORPO) {
 }
 
 // Endereço da conexão, e não X-Forwarded-For: esse cabeçalho o próprio cliente pode inventar.
-export const ipDe = (req) => req.socket.remoteAddress ?? 'desconhecido';
+// Atrás de proxy reverso toda conexão vem dele, e os limites por IP tratariam a escola
+// inteira como um só cliente. CONFIAR_PROXY=1 lê o X-Real-IP que o proxy grava, e só
+// é seguro quando o servidor não pode ser alcançado sem passar por ele.
+export function ipDe(req) {
+  const ipDoProxy = process.env.CONFIAR_PROXY === '1' ? req.headers['x-real-ip'] : undefined;
+  return ipDoProxy ?? req.socket.remoteAddress ?? 'desconhecido';
+}

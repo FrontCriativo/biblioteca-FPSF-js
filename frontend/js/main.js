@@ -1,5 +1,5 @@
 // Biblioteca Virtual — FPSF
-// Páginas sem lógica própria: contato.
+// Páginas sem lógica própria: contato, documentação da API e 404.
 
 import { api, escaparHtml, montarSessaoNavbar } from './api.js';
 

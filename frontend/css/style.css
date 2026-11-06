@@ -1423,3 +1423,63 @@ button, input, textarea{
 }
 .dialogo::backdrop{ background: rgb(0 0 0 / .45); }
 .dialogo h3{ font-size: 19px; color: var(--heading); margin-bottom: 6px; }
+
+/* Página 404. */
+.pagina-404{ padding-block: 90px 110px; text-align: center; }
+.pagina-404__codigo{
+  display: block;
+  font-family: var(--font-display);
+  font-size: 84px;
+  line-height: 1;
+  color: var(--lilac-deep);
+}
+.pagina-404 h1{ margin-top: 14px; font-size: 30px; color: var(--heading); }
+.pagina-404 p{ margin-top: 10px; color: var(--ink-soft); }
+.pagina-404__acoes{ margin-top: 28px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+/* Documentação da API. */
+.doc{ padding-block: 44px 90px; }
+.doc section{ padding-top: 34px; scroll-margin-top: 80px; }
+.doc h2{ font-size: 26px; color: var(--heading); margin-bottom: 12px; }
+.doc p, .doc li{ font-size: 15px; line-height: 1.6; color: var(--ink-soft); }
+.doc ul{ margin-block: 12px; padding-left: 20px; list-style: disc; }
+.doc li{ margin-bottom: 6px; }
+.doc :not(pre) > code{
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: .9em;
+  background: var(--paper-dim);
+  color: var(--heading);
+}
+.doc pre{
+  margin-block: 12px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--paper-dim);
+  color: var(--heading);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.doc-indice{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--card);
+}
+.doc-indice a{ font-size: 14px; font-weight: 600; color: var(--lilac-deep); }
+.doc-rota{
+  margin-top: 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--card);
+}
+.doc-rota h3{ font-size: 15px; margin-bottom: 6px; }
+.doc-tabela{ width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 14px; }
+.doc-tabela th, .doc-tabela td{ padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; color: var(--ink-soft); }
+.doc-tabela th{ color: var(--heading); }
