@@ -6,6 +6,8 @@ WORKDIR /app
 COPY package.json ./
 COPY backend ./backend
 COPY frontend ./frontend
+# O volume de capas esconde frontend/assets: o entrypoint copia estas imagens para ele a cada subida.
+COPY frontend/assets ./assets-da-imagem
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # As pastas de dados precisam ser do usuário "node": o Docker copia dono e conteúdo

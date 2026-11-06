@@ -35,13 +35,28 @@ docker compose -f docker-compose.producao.yml up -d --build
 
 **Nunca rode `down -v`:** esse comando apaga o banco e as capas.
 
+Imagens novas do site entram no volume `capas` sozinhas ao subir, e as capas enviadas ficam como estão.
+
+Se o aplicativo for usado na rede da escola, aumente `V1_LIMITE_POR_MINUTO` no `.env`: o limite é por
+IP, e a escola inteira sai pelo mesmo.
+
 Backup diário, no `crontab` do servidor:
 
 ```cron
+# Banco todo dia às 2h
 0 2 * * * cd /srv/biblioteca && docker compose -f docker-compose.producao.yml exec -T biblioteca npm run backup
+# Capas enviadas, depois do banco
+30 2 * * * cd /srv/biblioteca && docker compose -f docker-compose.producao.yml exec -T biblioteca sh -c 'tar -czf backup/capas-$(date +%F).tar.gz -C frontend assets'
+# Apaga backups com mais de 30 dias
+0 3 * * * cd /srv/biblioteca && docker compose -f docker-compose.producao.yml exec -T biblioteca find backup -type f -mtime +30 -delete
 ```
 
-O backup fica no volume `backups`, no mesmo disco do banco. Guarde uma cópia fora do servidor.
+Os backups ficam no volume `backups`, no mesmo disco do banco. Se o disco se perder, eles se perdem
+junto. Para tirar uma cópia do contêiner e levá-la para fora do servidor:
+
+```bash
+docker compose -f docker-compose.producao.yml cp biblioteca:/app/backup /var/backups/biblioteca
+```
 
 ## Cadastrar os alunos
 
@@ -74,6 +89,7 @@ colunas `nome`, `email` e `turma`, até 2000 alunos por vez.
 | `CONFIAR_PROXY` | `1` | Sem isso, todo mundo parece vir do mesmo IP |
 | `ADMIN_EMAIL`, `ADMIN_SENHA` | Da conta da coordenação | Só no `npm run seed`, que cria o banco |
 | `CORS_ORIGENS` | As origens do aplicativo web | Opcional. O padrão libera todas |
+| `V1_LIMITE_POR_MINUTO` | Chamadas à API v1 por IP | Opcional. O padrão é 60 |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Do Google Cloud | Ligam o login com o Google. Veja a seção abaixo |
 | `GOOGLE_URL_RETORNO` | `https://SEU-DOMINIO/api/auth/google/retorno` | Igual à cadastrada no Google |
 

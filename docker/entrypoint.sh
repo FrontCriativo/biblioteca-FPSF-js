@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Imagens do site que vieram numa versão nova. As capas enviadas têm outros nomes e ficam como estão.
+cp -r /app/assets-da-imagem/. /app/frontend/assets/
+
 # Primeira subida: o volume do banco está vazio.
 if [ ! -f "$DB_PATH" ]; then
     echo "> Banco não encontrado: criando."

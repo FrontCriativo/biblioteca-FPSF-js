@@ -172,7 +172,8 @@ quando o servidor sobe.
 A cópia é consistente mesmo com o site no ar, e o banco não é migrado. Faça um antes de atualizar o
 código. A pasta `backup/` fica fora do Git, porque os backups têm e-mails e hashes de senha.
 
-O backup cobre só o banco. As capas enviadas pelo painel ficam em `frontend/assets/`.
+O backup cobre só o banco. As capas enviadas pelo painel ficam em `frontend/assets/`, e a rotina
+para copiá-las está em [docs/deploy.md](docs/deploy.md).
 
 ### Restaurar um backup
 
@@ -227,8 +228,8 @@ docker compose logs -f                           # logs
 ```
 
 - `docker compose down` mantém os volumes. **`docker compose down -v` apaga o banco e as capas.**
-- O volume `capas` é preenchido só na primeira subida. Uma imagem nova em `frontend/assets/` não
-  aparece num volume que já existe: copie-a com `docker compose cp`.
+- A cada subida, as imagens de `frontend/assets/` são copiadas para o volume `capas`. As capas
+  enviadas pelo painel ficam como estão.
 - O compose não define `NODE_ENV=production`, porque o cookie `Secure` impede o login em `http://`.
   Defina essa variável só atrás de HTTPS, e veja [docs/deploy.md](docs/deploy.md).
 

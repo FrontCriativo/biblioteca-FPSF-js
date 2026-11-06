@@ -18,6 +18,9 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_URL_RETORNO: https://${DOMINIO:?defina DOMINIO no arquivo .env}/api/auth/google/retorno
       GOOGLE_DOMINIOS: ${GOOGLE_DOMINIOS:-}
+      # Em branco, a API usaria uma lista de origens vazia: o padrão precisa estar aqui.
+      CORS_ORIGENS: ${CORS_ORIGENS:-*}
+      V1_LIMITE_POR_MINUTO: ${V1_LIMITE_POR_MINUTO:-60}
 
   caddy:
     image: caddy:2-alpine
