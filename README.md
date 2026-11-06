@@ -75,6 +75,8 @@ Usada pelas páginas em `frontend/js/api.js`. Autenticação por cookie de sess�
 | POST | `/api/logout` | Público | Encerra a sessão |
 | GET | `/api/eu` | Público | Usuário da sessão, ou `null` |
 | POST | `/api/eu/senha` | Logado | Troca a própria senha e derruba os outros acessos |
+| PUT | `/api/eu/perfil` | Logado | Salva nome, série e telefone, e libera o site para o aluno |
+| GET | `/api/turmas` | Logado | Nomes das turmas ativas, para sugerir a série no perfil |
 | GET | `/api/materias` | Público | Matérias |
 | GET | `/api/livros` | Público | Livros; filtros `?materia=` e `?busca=` |
 | GET | `/api/livros/:slug` | Público | Um livro |

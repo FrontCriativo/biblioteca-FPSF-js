@@ -980,21 +980,26 @@ button, input, textarea{
 .login-form h1{ font-size: 28px; }
 .login-form > p{ color: var(--ink-soft); margin-top: 8px; font-size: 14.5px; }
 .login-form .field{ margin-top: 24px; margin-bottom: 0; }
-.password-field{ position: relative; }
+/* Input e botão dividem a mesma célula da grade: o botão centraliza no input, sem contar o rótulo. */
+.password-field{ display: grid; grid-template-columns: minmax(0, 1fr); }
+.password-field input{ grid-area: 2 / 1; padding-right: 50px; }
+/* O Edge desenha um olho próprio no campo de senha; sem isto, apareceriam dois. */
+.password-field input::-ms-reveal{ display: none; }
 .password-field button{
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
+  grid-area: 2 / 1;
+  justify-self: end;
+  align-self: center;
+  margin: 0 6px 0 0;
+  padding: 0;
   border: none;
   background: none;
   cursor: pointer;
-  margin-bottom: 0;
   font-weight: 500;
-  width: 30px; height: 30px;
+  width: 38px; height: 38px;
   display: flex; align-items: center; justify-content: center;
 }
-.password-field button img{ width: 18px; height: 18px; opacity: .6; }
+.password-field button img{ width: 34px; height: 34px; max-width: none; opacity: .75; }
+:root[data-tema="escuro"] .password-field button img{ filter: brightness(0) invert(1); opacity: .8; }
 .login-form__row{
   display: flex;
   justify-content: space-between;
@@ -1128,6 +1133,10 @@ button, input, textarea{
   font-weight: 600;
 }
 .nav-links__so-mobile{ display: none; }
+/* Antes do menu sanduíche a barra já fica justa: o primeiro nome cede lugar aos links. */
+@media (max-width: 1100px){
+  .nav-user__nome{ display: none; }
+}
 
 /* Mensagem de retorno dos formulários (sucesso em lilás, erro em vermelho). */
 .form-feedback{
@@ -1140,11 +1149,16 @@ button, input, textarea{
 .form-feedback a{ color: inherit; text-decoration: underline; }
 
 /* =========================================================
-   Trocar senha
+   Trocar senha e perfil
    ========================================================= */
-.troca-senha{ padding-block: 50px 90px; }
-.troca-senha .form-card{ max-width: 520px; margin-inline: auto; }
-.troca-senha__aviso{
+.troca-senha, .perfil{ padding-block: 50px 90px; }
+:is(.troca-senha, .perfil) .form-card{ max-width: 520px; margin-inline: auto; }
+.field input[readonly]{ color: var(--ink-soft); cursor: not-allowed; }
+:root[data-tema="escuro"] .field input[readonly]{ color: #8A8DA6; }
+.field__ajuda{ margin-top: 6px; font-size: 12.5px; color: var(--ink-soft); }
+.perfil__senha{ margin-top: 18px; font-size: 13.5px; font-weight: 600; }
+.perfil__senha a{ color: var(--lilac-deep); text-decoration: underline; }
+.troca-senha__aviso, .perfil__aviso{
   background: var(--ambar-fundo);
   color: var(--ambar-texto);
   border-radius: var(--radius-s);

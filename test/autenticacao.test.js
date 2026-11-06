@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  usarServidor, pedir, entrar, entrarPronto, idDoUsuario,
+  usarServidor, db, pedir, entrar, entrarPronto, idDoUsuario,
   ADMIN, BEATRIZ, RAFAEL, SENHA_ALUNO, SENHA_ADMIN,
 } from './helpers/servidor.js';
 
@@ -19,7 +19,9 @@ describe('login, logout e /api/eu', () => {
 
     const eu = await pedir('GET', '/api/eu', { cookie: r.cookie });
     assert.equal(eu.status, 200);
-    assert.deepEqual(Object.keys(eu.corpo).sort(), ['email', 'id', 'nome', 'papel', 'trocar_senha', 'turma']);
+    assert.deepEqual(Object.keys(eu.corpo).sort(), [
+      'completar_perfil', 'email', 'id', 'nome', 'papel', 'telefone', 'trocar_senha', 'turma',
+    ]);
   });
 
   test('senha errada e e-mail inexistente recebem a mesma resposta', async () => {
@@ -54,6 +56,7 @@ describe('login, logout e /api/eu', () => {
 
 describe('troca de senha', () => {
   test('conta nova só acessa o que permite a troca, até trocar a senha', async () => {
+    db.prepare('UPDATE usuarios SET perfil_confirmado = 1 WHERE email = ?').run(BEATRIZ);
     const cookie = await entrar(BEATRIZ, SENHA_ALUNO);
     const eu = await pedir('GET', '/api/eu', { cookie });
     assert.equal(eu.corpo.trocar_senha, 1);

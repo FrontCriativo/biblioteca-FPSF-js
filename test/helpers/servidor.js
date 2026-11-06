@@ -104,9 +104,9 @@ export async function entrar(email, senha) {
   return cookie;
 }
 
-/** Login de uma conta que já passou pela troca de senha obrigatória. */
+/** Login de uma conta que já passou pela troca de senha e pelo perfil obrigatórios. */
 export async function entrarPronto(email) {
-  db.prepare('UPDATE usuarios SET trocar_senha = 0 WHERE email = ?').run(email);
+  db.prepare('UPDATE usuarios SET trocar_senha = 0, perfil_confirmado = 1 WHERE email = ?').run(email);
   return entrar(email, email === ADMIN ? SENHA_ADMIN : SENHA_ALUNO);
 }
 

@@ -1,4 +1,4 @@
-// Troca de senha: obrigatória para senha provisória, opcional pelo menu do usuário.
+// Troca de senha: obrigatória para senha provisória, opcional pelo perfil (ou pela barra, na coordenação).
 
 import { api, montarSessaoNavbar } from './api.js';
 
@@ -42,7 +42,8 @@ form.addEventListener('submit', async (evento) => {
   form.reset();
   if (usuario.trocar_senha) {
     // Troca obrigatória feita: segue para onde o login levaria.
-    location.href = usuario.papel === 'admin' ? 'admin.html' : 'index.html';
+    if (usuario.completar_perfil) location.href = 'perfil.html';
+    else location.href = usuario.papel === 'admin' ? 'admin.html' : 'index.html';
     return;
   }
   mostrar('Senha alterada. Os outros aparelhos conectados à sua conta foram desconectados.');

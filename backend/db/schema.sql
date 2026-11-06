@@ -34,7 +34,11 @@ CREATE TABLE IF NOT EXISTS usuarios (
   trocar_senha INTEGER NOT NULL DEFAULT 0,
   turma_id    INTEGER REFERENCES turmas(id) ON DELETE SET NULL,
   -- 0 = conta desativada pela coordenação: não entra nem mantém sessão.
-  ativo       INTEGER NOT NULL DEFAULT 1
+  ativo       INTEGER NOT NULL DEFAULT 1,
+  -- Só dígitos, com DDD. Opcional.
+  telefone    TEXT,
+  -- 0 = o aluno ainda não conferiu os dados na tela de perfil: o site fica fechado para ele.
+  perfil_confirmado INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS materias (

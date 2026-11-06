@@ -118,6 +118,13 @@ const MIGRACOES = [
   () => exigirTabela('mensagens_contato'),
   // 11 — tokens da API v1.
   () => exigirTabela('tokens_api'),
+  // 12 — tela de perfil. Toda conta que já existia precisa conferir os dados uma vez.
+  () => {
+    if (!colunaExiste('usuarios', 'telefone')) db.exec('ALTER TABLE usuarios ADD COLUMN telefone TEXT');
+    if (!colunaExiste('usuarios', 'perfil_confirmado')) {
+      db.exec('ALTER TABLE usuarios ADD COLUMN perfil_confirmado INTEGER NOT NULL DEFAULT 0');
+    }
+  },
 ];
 
 function migrar() {

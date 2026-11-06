@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){
+  var salvo = localStorage.getItem('tema');
+  var escuro = salvo ? salvo === 'escuro' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-tema', escuro ? 'escuro' : 'claro');
+})();
+</script>
+<title>Perfil — Biblioteca Virtual FPSF</title>
+<link rel="icon" href="assets/icon-fpsf.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container">
+    <a class="brand" href="index.html">
+      <img src="assets/fpsf.jpg" alt="Biblioteca Virtual — página inicial">
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html">Início</a></li>
+        <li><a href="catalogo.html">Catálogo</a></li>
+        <li><a href="depoimentos.html">Depoimentos</a></li>
+        <li><a href="contato.html">Fale conosco</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" type="button" data-toggle-tema aria-label="Alternar modo escuro"><span aria-hidden="true">🌙</span></button>
+      <a href="login.html" class="btn btn--lilac">Entrar</a>
+      <button class="nav-toggle" aria-label="Abrir menu"><span></span></button>
+    </div>
+  </div>
+</header>
+
+<section class="page-header">
+  <div class="container">
+    <h1>Perfil</h1>
+    <p>Mantenha seus dados em dia para a biblioteca conseguir falar com você.</p>
+  </div>
+</section>
+
+<main class="perfil container">
+  <form class="form-card" data-form-perfil hidden>
+    <p class="perfil__aviso" data-aviso-perfil hidden>
+      Confira seus dados e informe sua série para continuar usando a biblioteca.
+    </p>
+
+    <div class="field">
+      <label for="nome">Nome completo</label>
+      <input id="nome" name="nome" autocomplete="name" maxlength="80" required>
+    </div>
+
+    <div class="field">
+      <label for="turma">Série</label>
+      <input id="turma" name="turma" list="lista-turmas" maxlength="40" autocomplete="off" placeholder="ex.: 8º ano B" required>
+      <datalist id="lista-turmas" data-lista-turmas></datalist>
+    </div>
+
+    <div class="field">
+      <label for="email">E-mail</label>
+      <input type="email" id="email" readonly aria-describedby="email-ajuda">
+      <p class="field__ajuda" id="email-ajuda">É o e-mail institucional que você usa para entrar. Ele não muda por aqui.</p>
+    </div>
+
+    <div class="field">
+      <label for="telefone">Telefone (opcional)</label>
+      <input type="tel" id="telefone" name="telefone" autocomplete="tel-national" inputmode="numeric" placeholder="(11) 91234-5678">
+    </div>
+
+    <button type="submit" class="btn btn--lilac">Salvar perfil</button>
+    <p class="form-feedback" data-feedback hidden></p>
+    <p class="perfil__senha" data-link-senha hidden><a href="trocar-senha.html">Trocar senha</a></p>
+  </form>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="assets/fpsf.jpg" alt="">
+        <div>
+          <strong>Escola Prof. Francisco Pereira de Souza Filho</strong>
+          <p>Biblioteca virtual criada para aproximar alunos, professores e famílias dos livros da escola.</p>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navegação</h4>
+        <ul>
+          <li><a href="index.html">Início</a></li>
+          <li><a href="catalogo.html">Catálogo</a></li>
+          <li><a href="depoimentos.html">Depoimentos</a></li>
+          <li><a href="contato.html">Fale conosco</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Matérias</h4>
+        <ul>
+          <li><a href="catalogo.html#literatura">Literatura</a></li>
+          <li><a href="catalogo.html#ciencias">Ciências</a></li>
+          <li><a href="catalogo.html#filosofia">Filosofia</a></li>
+          <li><a href="catalogo.html#historia">História</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Escola Prof. Francisco Pereira de Souza Filho</span>
+      <span>Biblioteca Virtual</span>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="js/perfil.js"></script>
+</body>
+</html>

@@ -437,6 +437,14 @@ export function atualizarPerfil(id, { nome, email }) {
     .run(nome ?? null, email ?? null, id);
 }
 
+/** Tela de perfil do site. O e-mail fica de fora: é o da conta, e não muda por aqui. */
+export function salvarPerfil(id, { nome, turma, telefone }) {
+  transacao(() => {
+    db.prepare('UPDATE usuarios SET nome = ?, turma_id = ?, telefone = ?, perfil_confirmado = 1 WHERE id = ?')
+      .run(nome, buscarOuCriarTurma(turma).id, telefone, id);
+  });
+}
+
 export function definirContaAtiva(id, ativo) {
   db.prepare('UPDATE usuarios SET ativo = ? WHERE id = ?').run(ativo ? 1 : 0, id);
 }

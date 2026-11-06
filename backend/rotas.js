@@ -26,6 +26,7 @@ const FORMATOS_CAPA = [
 ];
 
 export const MENSAGEM_TROCA_PENDENTE = 'Troque sua senha provisória antes de continuar.';
+const MENSAGEM_PERFIL_PENDENTE = 'Complete seu perfil antes de continuar.';
 
 function erroLoginBloqueado(email, ip) {
   return new ErroHttp(429, 'Muitas tentativas. Tente de novo em alguns minutos.', {
@@ -56,12 +57,18 @@ export function senhaAtualConfere(usuario, senhaAtual, ip) {
   return false;
 }
 
-/** permitirTrocaPendente: rotas que a conta com senha provisória ainda pode usar. */
-function exigirLogin(req, { permitirTrocaPendente = false } = {}) {
+/**
+ * permitirTrocaPendente: rotas que a conta com senha provisória ainda pode usar.
+ * permitirPerfilPendente: rotas que o aluno que ainda não conferiu o perfil pode usar.
+ */
+function exigirLogin(req, { permitirTrocaPendente = false, permitirPerfilPendente = false } = {}) {
   const usuario = usuarioDaSessao(lerCookie(req, 'sessao'));
   if (!usuario) throw new ErroHttp(401, 'Você precisa entrar para fazer isso.');
   if (usuario.trocar_senha && !permitirTrocaPendente) {
     throw new ErroHttp(403, MENSAGEM_TROCA_PENDENTE);
+  }
+  if (usuario.completar_perfil && !permitirPerfilPendente) {
+    throw new ErroHttp(403, MENSAGEM_PERFIL_PENDENTE);
   }
   return usuario;
 }
@@ -105,6 +112,17 @@ export function emailValido(corpo, campo, maximo) {
     throw new ErroValidacao(`O campo "${campo}" deve ser um e-mail válido.`);
   }
   return email;
+}
+
+/** Devolve só os dígitos, que é a forma gravada no banco. Em branco vira null. */
+function telefoneOpcional(corpo, campo) {
+  const texto = textoOpcional(corpo, campo, 20);
+  if (!texto) return null;
+  const digitos = texto.replace(/\D/g, '');
+  if (digitos.length < 10 || digitos.length > 11) {
+    throw new ErroValidacao('Informe o telefone com DDD, como (11) 91234-5678.');
+  }
+  return digitos;
 }
 
 const TAMANHO_MINIMO_SENHA = 8;
@@ -230,6 +248,7 @@ const rotas = {
       corpo: {
         id: usuario.id, nome: usuario.nome, email: usuario.email,
         papel: usuario.papel, turma: usuario.turma, trocar_senha: usuario.trocar_senha,
+        completar_perfil: usuario.completar_perfil,
       },
       cabecalhos: { 'Set-Cookie': cabecalhoCookieSessao(token) },
     };
@@ -283,8 +302,24 @@ const rotas = {
 
   'GET /api/eu': (req) => ({ corpo: usuarioDaSessao(lerCookie(req, 'sessao')) }),
 
+  'PUT /api/eu/perfil': (req, { corpo }) => {
+    const usuario = exigirLogin(req, { permitirPerfilPendente: true });
+    repo.salvarPerfil(usuario.id, {
+      nome: textoLimitado(corpo, 'nome', 80),
+      turma: textoLimitado(corpo, 'turma', 40),
+      telefone: telefoneOpcional(corpo, 'telefone'),
+    });
+    return { corpo: usuarioDaSessao(lerCookie(req, 'sessao')) };
+  },
+
+  // Sugestões do campo "Série" do perfil: só os nomes, sem o resto da rota da coordenação.
+  'GET /api/turmas': (req) => {
+    exigirLogin(req, { permitirPerfilPendente: true });
+    return { corpo: repo.listarTurmas().map((t) => t.nome) };
+  },
+
   'POST /api/eu/senha': (req, { corpo }) => {
-    const usuario = exigirLogin(req, { permitirTrocaPendente: true });
+    const usuario = exigirLogin(req, { permitirTrocaPendente: true, permitirPerfilPendente: true });
     const senhaAtual = campoObrigatorio(corpo, 'senha_atual');
     const nova = senhaNova(corpo, 'nova_senha');
     if (!senhaAtualConfere(usuario, senhaAtual, ipDe(req))) {

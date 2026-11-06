@@ -9,8 +9,9 @@ const destino = new URLSearchParams(location.search).get('destino');
 // Páginas internas apenas: um destino externo viraria redirecionamento aberto.
 const paginaSegura = destino && /^[a-z0-9-]+\.html$/.test(destino) ? destino : 'index.html';
 
-// Senha provisória (seed ou definida pela coordenação): primeiro a troca, depois o site.
+// Senha provisória (seed ou definida pela coordenação): primeiro a troca, depois o perfil e o site.
 const PAGINA_TROCA = 'trocar-senha.html';
+const PAGINA_PERFIL = 'perfil.html';
 
 // Códigos que a volta do login com o Google traz na URL.
 const ERROS_GOOGLE = {
@@ -30,6 +31,7 @@ function mostrarErro(mensagem) {
 
 function paginaDepoisDoLogin(usuario) {
   if (usuario.trocar_senha) return PAGINA_TROCA;
+  if (usuario.completar_perfil) return PAGINA_PERFIL;
   return destino ? paginaSegura : (usuario.papel === 'admin' ? 'admin.html' : 'index.html');
 }
 

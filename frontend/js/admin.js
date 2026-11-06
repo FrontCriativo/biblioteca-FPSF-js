@@ -122,13 +122,15 @@ async function carregarReservas() {
         <span class="selo selo--${r.status}">${ROTULOS_STATUS[r.status]}</span>
         ${r.observacao ? `<span class="cel-sub cel-observacao">${escaparHtml(r.observacao)}</span>` : ''}
       </td>
-      <td class="cel-acoes">
-        ${r.status === 'ativa' ? `<button class="mini-btn" data-retirar="${r.id}">Retirado</button>` : ''}
-        ${r.status === 'retirada' ? `<button class="mini-btn" data-devolver="${r.id}">Devolvido</button>` : ''}
-        ${r.status === 'retirada' ? `<button class="mini-btn" data-renovar="${r.id}">Renovar</button>` : ''}
-        <button class="mini-btn" data-observacao="${r.id}">Observação</button>
-        ${['ativa', 'retirada'].includes(r.status)
-          ? `<button class="mini-btn mini-btn--perigo" data-cancelar="${r.id}">Cancelar</button>` : ''}
+      <td>
+        <div class="cel-acoes">
+          ${r.status === 'ativa' ? `<button class="mini-btn" data-retirar="${r.id}">Retirado</button>` : ''}
+          ${r.status === 'retirada' ? `<button class="mini-btn" data-devolver="${r.id}">Devolvido</button>` : ''}
+          ${r.status === 'retirada' ? `<button class="mini-btn" data-renovar="${r.id}">Renovar</button>` : ''}
+          <button class="mini-btn" data-observacao="${r.id}">Observação</button>
+          ${['ativa', 'retirada'].includes(r.status)
+            ? `<button class="mini-btn mini-btn--perigo" data-cancelar="${r.id}">Cancelar</button>` : ''}
+        </div>
       </td>
     </tr>`).join('');
 }
@@ -258,10 +260,12 @@ async function carregarLivros() {
           ${l.disponiveis} ${l.disponiveis === 1 ? 'livre' : 'livres'}
         </span>
       </td>
-      <td class="cel-acoes">
-        <button class="mini-btn" data-editar="${l.id}">Editar</button>
-        <button class="mini-btn" data-add-exemplar="${l.id}">+ exemplar</button>
-        <button class="mini-btn mini-btn--perigo" data-excluir="${l.id}">Remover</button>
+      <td>
+        <div class="cel-acoes">
+          <button class="mini-btn" data-editar="${l.id}">Editar</button>
+          <button class="mini-btn" data-add-exemplar="${l.id}">+ exemplar</button>
+          <button class="mini-btn mini-btn--perigo" data-excluir="${l.id}">Remover</button>
+        </div>
       </td>
     </tr>`).join('');
 }
@@ -433,7 +437,7 @@ async function carregarUsuarios() {
       <td><span class="selo selo--${u.papel === 'admin' ? 'retirada' : 'ativa'}">${u.papel}</span></td>
       <td>${u.reservas_ativas}</td>
       <td><span class="selo selo--${u.ativo ? 'devolvida' : 'cancelada'}">${u.ativo ? 'Ativa' : 'Desativada'}</span></td>
-      <td class="cel-acoes">${botaoSituacao(u)}</td>
+      <td><div class="cel-acoes">${botaoSituacao(u)}</div></td>
     </tr>`).join('');
 
   const form = document.querySelector('[data-form-usuario]');
@@ -559,9 +563,11 @@ async function carregarDepoimentos() {
       <td class="cel-mensagem">${escaparHtml(d.mensagem)}</td>
       <td>${formatarData(d.criado_em)}</td>
       <td><span class="selo selo--${selo}">${rotulo}</span></td>
-      <td class="cel-acoes">
-        ${d.status !== 'aprovado' ? `<button class="mini-btn" data-aprovar="${d.id}">Aprovar</button>` : ''}
-        ${d.status !== 'recusado' ? `<button class="mini-btn mini-btn--perigo" data-recusar="${d.id}">Recusar</button>` : ''}
+      <td>
+        <div class="cel-acoes">
+          ${d.status !== 'aprovado' ? `<button class="mini-btn" data-aprovar="${d.id}">Aprovar</button>` : ''}
+          ${d.status !== 'recusado' ? `<button class="mini-btn mini-btn--perigo" data-recusar="${d.id}">Recusar</button>` : ''}
+        </div>
       </td>
     </tr>`;
   }).join('');
@@ -617,9 +623,11 @@ async function carregarMensagens() {
       <td class="cel-mensagem">${escaparHtml(m.mensagem)}</td>
       <td>${formatarData(m.criada_em)}</td>
       <td><span class="selo selo--${selo}">${rotulo}</span></td>
-      <td class="cel-acoes">
-        ${m.status === 'nova' ? `<button class="mini-btn" data-marcar-lida="${m.id}">Marcar como lida</button>` : ''}
-        ${email ? `<button class="mini-btn" data-responder="${m.id}">Responder por e-mail</button>` : ''}
+      <td>
+        <div class="cel-acoes">
+          ${m.status === 'nova' ? `<button class="mini-btn" data-marcar-lida="${m.id}">Marcar como lida</button>` : ''}
+          ${email ? `<button class="mini-btn" data-responder="${m.id}">Responder por e-mail</button>` : ''}
+        </div>
       </td>
     </tr>`;
   }).join('');

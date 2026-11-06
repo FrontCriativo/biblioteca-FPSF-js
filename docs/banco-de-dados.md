@@ -32,6 +32,8 @@ reserva aberta, e não um campo do livro.
 | `trocar_senha` | INTEGER | 1 = senha provisória, troca obrigatória |
 | `turma_id` | INTEGER | Chave para `turmas` |
 | `ativo` | INTEGER | 0 = conta desativada |
+| `telefone` | TEXT | Opcional. Só dígitos, com DDD |
+| `perfil_confirmado` | INTEGER | 0 = o aluno ainda não conferiu os dados na tela de perfil. Não vale para a coordenação |
 
 ### `materias`
 
@@ -199,3 +201,4 @@ uma numa transação. Veja no README [como criar uma nova](../README.md#como-cri
 | 9 | Tabela `favoritos` |
 | 10 | Tabela `mensagens_contato` |
 | 11 | Tabela `tokens_api` |
+| 12 | `usuarios.telefone` e `perfil_confirmado`. Toda conta existente começa sem confirmar |

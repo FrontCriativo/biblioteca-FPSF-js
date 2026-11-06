@@ -22,6 +22,8 @@ export const api = {
   sair: () => pedir('/logout', { metodo: 'POST' }),
   trocarSenha: (senhaAtual, novaSenha) =>
     pedir('/eu/senha', { metodo: 'POST', corpo: { senha_atual: senhaAtual, nova_senha: novaSenha } }),
+  salvarPerfil: (dados) => pedir('/eu/perfil', { metodo: 'PUT', corpo: dados }),
+  sugestoesDeTurma: () => pedir('/turmas'),
 
   materias: () => pedir('/materias'),
   livros: ({ materia, busca } = {}) => {
@@ -208,6 +210,12 @@ export async function montarSessaoNavbar() {
     return new Promise(() => {}); // a página para aqui enquanto o navegador muda de endereço
   }
 
+  // Perfil por conferir: mesma regra, depois da senha.
+  if (usuario?.completar_perfil && !usuario.trocar_senha && paginaAtual !== 'perfil.html') {
+    location.replace('perfil.html');
+    return new Promise(() => {});
+  }
+
   const acoes = document.querySelector('.nav-actions');
   if (!acoes) return usuario;
 
@@ -220,6 +228,8 @@ export async function montarSessaoNavbar() {
   entrar?.style.setProperty('display', 'none');
 
   const ehAdmin = usuario.papel === 'admin';
+  // O aluno troca a senha pelo perfil. A coordenação não tem perfil: o link fica na barra.
+  const [hrefConta, textoConta] = ehAdmin ? ['trocar-senha.html', 'Trocar senha'] : ['perfil.html', 'Perfil'];
   const links = document.querySelector('.nav-links');
 
   // "Minhas reservas" fica no menu central. Admin: tira "Início" e "Fale conosco" e ganha também "Admin".
@@ -230,7 +240,7 @@ export async function montarSessaoNavbar() {
     const itens = [['minhas-reservas.html', 'Minhas reservas']];
     if (ehAdmin) itens.push(['admin.html', 'Admin']);
     // No celular o menu do usuário esconde o link: ele entra no menu sanduíche.
-    itens.push(['trocar-senha.html', 'Trocar senha', 'nav-links__so-mobile']);
+    itens.push([hrefConta, textoConta, 'nav-links__so-mobile']);
     itens.forEach(([href, texto, classe]) => {
       if (links.querySelector(`a[href="${href}"]`)) return;
       const li = document.createElement('li');
@@ -243,9 +253,9 @@ export async function montarSessaoNavbar() {
   const menu = document.createElement('div');
   menu.className = 'nav-user';
   menu.innerHTML = `
-    <span class="nav-user__nome">${escaparHtml(usuario.nome.split(' ')[0])}</span>
-    <a class="nav-user__link" href="trocar-senha.html">Trocar senha</a>
     <button class="btn btn--ghost-light" type="button" data-sair>Sair</button>
+    <span class="nav-user__nome">${escaparHtml(usuario.nome.split(' ')[0])}</span>
+    <a class="nav-user__link" href="${hrefConta}">${textoConta}</a>
   `;
   acoes.insertBefore(menu, acoes.querySelector('.nav-toggle'));
 

@@ -67,10 +67,13 @@ export function definirSenha(usuarioId, senha, { trocarSenha }) {
     .run(criarHashSenha(senha), trocarSenha ? 1 : 0, usuarioId);
 }
 
+// A coordenação não tem série: só conta de aluno passa pela tela de perfil.
+const PERFIL_PENDENTE = "(u.papel = 'aluno' AND u.perfil_confirmado = 0) AS completar_perfil";
+
 /** A conta com a senha, para conferir o login. Inclui as desativadas: quem decide é a rota. */
 export function buscarContaPorEmail(email) {
   return db.prepare(
-    `SELECT u.*, t.nome AS turma
+    `SELECT u.*, t.nome AS turma, ${PERFIL_PENDENTE}
        FROM usuarios u
        LEFT JOIN turmas t ON t.id = u.turma_id
       WHERE u.email = ?`
@@ -81,7 +84,7 @@ export function buscarContaPorEmail(email) {
 export function usuarioDaSessao(token) {
   if (!token) return null;
   return db.prepare(
-    `SELECT u.id, u.nome, u.email, u.papel, t.nome AS turma, u.trocar_senha
+    `SELECT u.id, u.nome, u.email, u.papel, t.nome AS turma, u.telefone, u.trocar_senha, ${PERFIL_PENDENTE}
        FROM sessoes s
        JOIN usuarios u ON u.id = s.usuario_id
        LEFT JOIN turmas t ON t.id = u.turma_id
