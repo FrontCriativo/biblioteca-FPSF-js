@@ -27,9 +27,11 @@ export async function lerCorpo(req, limite = LIMITE_CORPO) {
   let tamanho = 0;
   for await (const pedaco of req) {
     tamanho += pedaco.length;
-    if (tamanho > limite) throw new ErroHttp(413, 'Corpo da requisição grande demais.');
-    partes.push(pedaco);
+    // Lê até o fim sem guardar o excedente. Parar no meio deixaria o resto do corpo
+    // na conexão keep-alive, e a próxima requisição dela ficaria presa até o timeout.
+    if (tamanho <= limite) partes.push(pedaco);
   }
+  if (tamanho > limite) throw new ErroHttp(413, 'Corpo da requisição grande demais.');
   if (!partes.length) return {};
   let corpo;
   try {

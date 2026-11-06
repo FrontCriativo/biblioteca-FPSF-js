@@ -3,10 +3,11 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolverRota } from './rotas.js';
+import { atenderV1 } from './api-v1.js';
 import { responderJson, lerCorpo, LIMITE_CORPO } from './http.js';
 import { faxinarLimites } from './limite.js';
 import { expirarReservasVencidas } from './repositorio.js';
-import { apagarSessoesVencidas } from './auth.js';
+import { apagarSessoesVencidas, apagarTokensVencidos } from './auth.js';
 import { executadoDiretamente } from './execucao.js';
 
 const PORTA = Number(process.env.PORT) || 3000;
@@ -69,6 +70,10 @@ async function atender(req, res) {
     return servirArquivo(res, caminho);
   }
 
+  if (url.pathname === '/api/v1' || url.pathname.startsWith('/api/v1/')) {
+    return atenderV1(req, res, url);
+  }
+
   try {
     const rota = resolverRota(req.method, url.pathname);
     if (!rota) return responderJson(res, 404, { erro: 'Rota não encontrada.' });
@@ -95,20 +100,23 @@ export function criarServidor() {
       await atender(req, res);
     } catch (erro) {
       console.error('Requisição recusada:', erro.message);
-      if (!res.headersSent) responderJson(res, 400, { erro: 'Requisição inválida.' });
-      else res.end();
+      if (res.headersSent) return res.end();
+      const envelope = req.url.startsWith('/api/v1') ? { success: false } : {};
+      responderJson(res, 400, { ...envelope, erro: 'Requisição inválida.' });
     }
   });
 }
 
-// Faxina: sessões vencidas saem do banco na inicialização e depois a cada hora.
-function limparVencidos() {
+// Faxina: sessões e tokens vencidos saem do banco na inicialização e depois a cada hora.
+export function limparVencidos() {
   try {
     const sessoes = apagarSessoesVencidas();
+    const tokens = apagarTokensVencidos();
     faxinarLimites();
     if (sessoes) console.log(`  ${sessoes} sessão(ões) vencida(s) apagada(s).`);
+    if (tokens) console.log(`  ${tokens} token(s) vencido(s) apagado(s).`);
   } catch (erro) {
-    console.error('Erro ao apagar sessões vencidas:', erro);
+    console.error('Erro ao apagar sessões e tokens vencidos:', erro);
   }
 }
 

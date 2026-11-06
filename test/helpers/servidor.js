@@ -109,6 +109,19 @@ export async function entrarPronto(email) {
   return entrar(email, email === ADMIN ? SENHA_ADMIN : SENHA_ALUNO);
 }
 
+/** Login na v1. Devolve o token. */
+export async function entrarV1(email, senha, device_name) {
+  const { status, corpo } = await pedir('POST', '/api/v1/auth/login', { corpo: { email, senha, device_name } });
+  if (status !== 200) throw new Error(`Login v1 de ${email} falhou com ${status}: ${corpo.erro}`);
+  return corpo.data.token;
+}
+
+/** Token de uma conta que já passou pela troca de senha obrigatória. */
+export async function tokenPronto(email, device_name) {
+  db.prepare('UPDATE usuarios SET trocar_senha = 0 WHERE email = ?').run(email);
+  return entrarV1(email, email === ADMIN ? SENHA_ADMIN : SENHA_ALUNO, device_name);
+}
+
 export const idDoLivro = (slug) => db.prepare('SELECT id FROM livros WHERE slug = ?').get(slug).id;
 export const idDoUsuario = (email) => db.prepare('SELECT id FROM usuarios WHERE email = ?').get(email).id;
 

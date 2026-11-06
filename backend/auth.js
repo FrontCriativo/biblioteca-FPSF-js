@@ -1,9 +1,10 @@
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { db } from './db/index.js';
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { db, transacao } from './db/index.js';
 import { criarLimitador } from './limite.js';
 import { normalizarEmail } from './texto.js';
 
 const DURACAO_SESSAO_DIAS = 7;
+const DURACAO_TOKEN_DIAS = 7;
 
 export function criarHashSenha(senha) {
   const sal = randomBytes(16).toString('hex');
@@ -32,9 +33,14 @@ export function encerrarSessao(token) {
   db.prepare('DELETE FROM sessoes WHERE token = ?').run(token);
 }
 
-/** Desloga o usuário em todos os aparelhos, menos na sessão `manter` (se informada). */
-export function encerrarSessoesDoUsuario(usuarioId, manter = null) {
-  db.prepare('DELETE FROM sessoes WHERE usuario_id = ? AND token IS NOT ?').run(usuarioId, manter);
+/**
+ * Desloga o usuário em todo lugar, no site e na API v1, menos na credencial usada na
+ * requisição atual (se informada). Vale para troca de senha e para conta desativada:
+ * quem tinha o acesso antigo não pode continuar entrando por nenhum dos dois caminhos.
+ */
+export function encerrarAcessos(usuarioId, { manterSessao = null, manterToken = null } = {}) {
+  db.prepare('DELETE FROM sessoes WHERE usuario_id = ? AND token IS NOT ?').run(usuarioId, manterSessao);
+  db.prepare('DELETE FROM tokens_api WHERE usuario_id = ? AND id IS NOT ?').run(usuarioId, manterToken);
 }
 
 /** Grava uma nova senha. trocarSenha = true obriga a trocá-la no próximo acesso. */
@@ -78,6 +84,48 @@ export function lerCookie(req, nome) {
     }
   }
   return null;
+}
+
+const hashDoToken = (token) => createHash('sha256').update(token).digest('hex');
+
+/** Cria o token do dispositivo, no lugar do anterior. O texto só existe nesta resposta. */
+export function emitirToken(usuarioId, dispositivo) {
+  const token = randomBytes(32).toString('hex');
+  transacao(() => {
+    db.prepare('DELETE FROM tokens_api WHERE usuario_id = ? AND dispositivo = ?').run(usuarioId, dispositivo);
+    db.prepare(
+      `INSERT INTO tokens_api (usuario_id, dispositivo, token_hash, expira_em)
+       VALUES (?, ?, ?, datetime('now', '+${DURACAO_TOKEN_DIAS} days'))`
+    ).run(usuarioId, dispositivo, hashDoToken(token));
+  });
+  return token;
+}
+
+export function usuarioDoToken(token) {
+  if (!token) return null;
+  const usuario = db.prepare(
+    `SELECT u.id, u.nome, u.email, u.papel, t.nome AS turma, u.trocar_senha, k.id AS token_id
+       FROM tokens_api k
+       JOIN usuarios u ON u.id = k.usuario_id
+       LEFT JOIN turmas t ON t.id = u.turma_id
+      WHERE k.token_hash = ? AND k.expira_em > datetime('now') AND u.ativo = 1`
+  ).get(hashDoToken(token));
+  if (!usuario) return null;
+  // No máximo uma escrita por minuto: o aplicativo pode fazer várias chamadas em seguida.
+  db.prepare(
+    `UPDATE tokens_api SET ultimo_uso_em = datetime('now')
+      WHERE id = ? AND (ultimo_uso_em IS NULL OR ultimo_uso_em < datetime('now', '-1 minute'))`
+  ).run(usuario.token_id);
+  return usuario;
+}
+
+export function apagarToken(tokenId) {
+  db.prepare('DELETE FROM tokens_api WHERE id = ?').run(tokenId);
+}
+
+/** Apaga do banco os tokens vencidos. Devolve quantos foram removidos. */
+export function apagarTokensVencidos() {
+  return db.prepare("DELETE FROM tokens_api WHERE expira_em <= datetime('now')").run().changes;
 }
 
 /** Apaga do banco as sessões vencidas. Devolve quantas foram removidas. */

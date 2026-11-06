@@ -118,6 +118,8 @@ const MIGRACOES = [
   () => exigirTabela('favoritos'),
   // 10 — mensagens do "Fale conosco".
   () => exigirTabela('mensagens_contato'),
+  // 11 — tokens da API v1.
+  () => exigirTabela('tokens_api'),
 ];
 
 function migrar() {

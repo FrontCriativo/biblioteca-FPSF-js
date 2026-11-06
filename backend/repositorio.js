@@ -95,6 +95,21 @@ export function buscarLivroPorSlug(slug) {
   `).get(slug) ?? null;
 }
 
+export function buscarLivroPorId(id) {
+  return db.prepare(`
+    SELECT ${COLUNAS_LIVRO}
+      FROM livros l
+      JOIN materias m ON m.slug = l.materia_slug
+     WHERE l.id = ?
+  `).get(id) ?? null;
+}
+
+/** Os livros cadastrados por último. */
+export function idsDosLivrosMaisRecentes(quantidade) {
+  return db.prepare('SELECT id FROM livros ORDER BY criado_em DESC, id DESC LIMIT ?')
+    .all(quantidade).map((l) => l.id);
+}
+
 export function criarLivro(dados) {
   const { slug, titulo, autor, materia_slug, capa, sinopse, paginas, idioma, exemplares = 1 } = dados;
   return transacao(() => {
@@ -118,11 +133,7 @@ export function atualizarLivro(id, dados) {
      WHERE id = ?
   `).run(titulo, autor, materia_slug, capa ?? null, sinopse ?? null,
          paginas ?? null, idioma ?? 'Português', buscaNormalizadaLivro(titulo, autor), id);
-  return db.prepare(`
-    SELECT ${COLUNAS_LIVRO}
-      FROM livros l JOIN materias m ON m.slug = l.materia_slug
-     WHERE l.id = ?
-  `).get(id);
+  return buscarLivroPorId(id);
 }
 
 export function removerLivro(id) {
@@ -398,6 +409,16 @@ export function criarUsuario({ nome, email, senhaHash, papel, turma }) {
     `).run(nome, email, senhaHash, papel, registro?.id ?? null);
     return { id: Number(lastInsertRowid), nome, email, papel, turma: registro?.nome ?? null };
   });
+}
+
+export function emailEmUso(email, ignorarUsuarioId) {
+  return Boolean(db.prepare('SELECT 1 FROM usuarios WHERE email = ? AND id <> ?').get(email, ignorarUsuarioId));
+}
+
+/** Só nome e e-mail mudam por aqui; o campo ausente fica como está. */
+export function atualizarPerfil(id, { nome, email }) {
+  db.prepare('UPDATE usuarios SET nome = COALESCE(?, nome), email = COALESCE(?, email) WHERE id = ?')
+    .run(nome ?? null, email ?? null, id);
 }
 
 export function definirContaAtiva(id, ativo) {

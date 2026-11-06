@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer, request } from 'node:http';
+import { connect } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { usarServidor, pedir, portaDoServidor } from './helpers/servidor.js';
 
@@ -52,6 +53,30 @@ test('JSON inválido é 400', async () => {
 test('corpo grande demais é 413', async () => {
   const r = await pedir('POST', '/api/login', { corpo: { email: 'x'.repeat(1_100_000), senha: 'y' } });
   assert.equal(r.status, 413);
+});
+
+test('depois de um 413 a mesma conexão continua atendendo', async (t) => {
+  // Socket cru para controlar o tempo: o fim do corpo só chega depois de o servidor já ter
+  // passado do limite, e a requisição seguinte vai na mesma conexão, como faz o keep-alive.
+  const socket = connect(portaDoServidor(), '127.0.0.1');
+  t.after(() => socket.destroy());
+  socket.setEncoding('utf8');
+  let recebido = '';
+  socket.on('data', (d) => { recebido += d; });
+
+  const tamanho = 1_100_000;
+  socket.write(`POST /api/login HTTP/1.1\r\nHost: x\r\nContent-Length: ${tamanho}\r\n\r\n`);
+  socket.write('x'.repeat(tamanho - 1000));
+  await new Promise((pronto) => setTimeout(pronto, 150));
+  socket.write('x'.repeat(1000));
+  socket.write('GET /api/materias HTTP/1.1\r\nHost: x\r\n\r\n');
+
+  const limite = Date.now() + 2000;
+  while (!recebido.includes('literatura') && Date.now() < limite) {
+    await new Promise((pronto) => setTimeout(pronto, 20));
+  }
+  assert.match(recebido, /^HTTP\/1\.1 413/);
+  assert.match(recebido, /HTTP\/1\.1 200[\s\S]*literatura/, 'a requisição seguinte ficou presa na conexão');
 });
 
 test('cookie malformado vale como sem sessão', async () => {

@@ -1,8 +1,8 @@
 import {
   criarHashSenha, conferirSenha, abrirSessao, encerrarSessao,
   usuarioDaSessao, lerCookie, cabecalhoCookieSessao, cookieSessaoExpirado,
-  loginBloqueado, registrarFalhaLogin, limparFalhasLogin,
-  definirSenha, encerrarSessoesDoUsuario, buscarContaPorEmail,
+  loginBloqueado, segundosDeBloqueioLogin, registrarFalhaLogin, limparFalhasLogin,
+  definirSenha, encerrarAcessos, buscarContaPorEmail,
 } from './auth.js';
 import { existsSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -21,14 +21,43 @@ const FORMATOS_CAPA = [
   { ext: '.webp', confere: (b) => b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP' },
 ];
 
-export const MENSAGEM_CONTA_DESATIVADA = 'Conta desativada. Procure a coordenação.';
+export const MENSAGEM_TROCA_PENDENTE = 'Troque sua senha provisória antes de continuar.';
+
+function erroLoginBloqueado(email, ip) {
+  return new ErroHttp(429, 'Muitas tentativas. Tente de novo em alguns minutos.', {
+    'Retry-After': String(segundosDeBloqueioLogin(email, ip)),
+  });
+}
+
+/** Regra de login do site e da v1. Devolve a conta, ou lança o erro que a rota deve responder. */
+export function autenticar(email, senha, ip) {
+  if (loginBloqueado(email, ip)) throw erroLoginBloqueado(email, ip);
+  const usuario = buscarContaPorEmail(email);
+  if (!usuario || !conferirSenha(senha, usuario.senha_hash)) {
+    registrarFalhaLogin(email, ip);
+    throw new ErroHttp(401, 'E-mail ou senha incorretos.');
+  }
+  limparFalhasLogin(email);
+  // Só depois da senha: a resposta não pode revelar quais e-mails existem.
+  if (!usuario.ativo) throw new ErroHttp(403, 'Conta desativada. Procure a coordenação.');
+  return usuario;
+}
+
+/** Conta no mesmo limite do login: uma credencial roubada não pode testar senhas à vontade. */
+export function senhaAtualConfere(usuario, senhaAtual, ip) {
+  if (loginBloqueado(usuario.email, ip)) throw erroLoginBloqueado(usuario.email, ip);
+  const { senha_hash } = db.prepare('SELECT senha_hash FROM usuarios WHERE id = ?').get(usuario.id);
+  if (conferirSenha(senhaAtual, senha_hash)) return true;
+  registrarFalhaLogin(usuario.email, ip);
+  return false;
+}
 
 /** permitirTrocaPendente: rotas que a conta com senha provisória ainda pode usar. */
 function exigirLogin(req, { permitirTrocaPendente = false } = {}) {
   const usuario = usuarioDaSessao(lerCookie(req, 'sessao'));
   if (!usuario) throw new ErroHttp(401, 'Você precisa entrar para fazer isso.');
   if (usuario.trocar_senha && !permitirTrocaPendente) {
-    throw new ErroHttp(403, 'Troque sua senha provisória antes de continuar.');
+    throw new ErroHttp(403, MENSAGEM_TROCA_PENDENTE);
   }
   return usuario;
 }
@@ -152,18 +181,7 @@ const rotas = {
   'POST /api/login': (req, { corpo }) => {
     const email = normalizarEmail(campoObrigatorio(corpo, 'email'));
     const senha = campoObrigatorio(corpo, 'senha');
-    const ip = ipDe(req);
-    if (loginBloqueado(email, ip)) {
-      throw new ErroHttp(429, 'Muitas tentativas. Tente de novo em alguns minutos.');
-    }
-    const usuario = buscarContaPorEmail(email);
-    if (!usuario || !conferirSenha(senha, usuario.senha_hash)) {
-      registrarFalhaLogin(email, ip);
-      throw new ErroHttp(401, 'E-mail ou senha incorretos.');
-    }
-    limparFalhasLogin(email);
-    // Só depois da senha: a resposta não pode revelar quais e-mails existem.
-    if (!usuario.ativo) throw new ErroHttp(403, MENSAGEM_CONTA_DESATIVADA);
+    const usuario = autenticar(email, senha, ipDe(req));
     const token = abrirSessao(usuario.id);
     return {
       corpo: {
@@ -186,21 +204,14 @@ const rotas = {
     const usuario = exigirLogin(req, { permitirTrocaPendente: true });
     const senhaAtual = campoObrigatorio(corpo, 'senha_atual');
     const nova = senhaNova(corpo, 'nova_senha');
-    // Conta no mesmo limite do login: uma sessão roubada não pode testar senhas à vontade.
-    const ip = ipDe(req);
-    if (loginBloqueado(usuario.email, ip)) {
-      throw new ErroHttp(429, 'Muitas tentativas. Tente de novo em alguns minutos.');
-    }
-    const { senha_hash } = db.prepare('SELECT senha_hash FROM usuarios WHERE id = ?').get(usuario.id);
-    if (!conferirSenha(senhaAtual, senha_hash)) {
-      registrarFalhaLogin(usuario.email, ip);
+    if (!senhaAtualConfere(usuario, senhaAtual, ipDe(req))) {
       throw new ErroHttp(400, 'A senha atual está incorreta.');
     }
     if (nova === senhaAtual) throw new ErroHttp(400, 'A nova senha precisa ser diferente da atual.');
-    // As outras sessões caem (quem tinha a senha antiga perde o acesso); esta continua.
+    // Quem tinha a senha antiga perde o acesso, nas outras sessões e no aplicativo; esta continua.
     transacao(() => {
       definirSenha(usuario.id, nova, { trocarSenha: false });
-      encerrarSessoesDoUsuario(usuario.id, lerCookie(req, 'sessao'));
+      encerrarAcessos(usuario.id, { manterSessao: lerCookie(req, 'sessao') });
     });
     return { corpo: { ok: true } };
   },
@@ -380,7 +391,7 @@ const rotas = {
     }
     transacao(() => {
       definirSenha(id, senha, { trocarSenha: true });
-      encerrarSessoesDoUsuario(id);
+      encerrarAcessos(id);
     });
     return { corpo: { ok: true } };
   },
@@ -392,7 +403,7 @@ const rotas = {
     if (!repo.usuarioExiste(id)) throw new ErroHttp(404, 'Usuário não encontrado.');
     const reservasCanceladas = transacao(() => {
       repo.definirContaAtiva(id, false);
-      encerrarSessoesDoUsuario(id);
+      encerrarAcessos(id);
       return repo.cancelarReservasAtivasDoUsuario(id);
     });
     return { corpo: { ok: true, reservas_canceladas: reservasCanceladas } };

@@ -146,3 +146,17 @@ CREATE TABLE IF NOT EXISTS mensagens_contato (
 );
 
 CREATE INDEX IF NOT EXISTS idx_mensagens_status ON mensagens_contato(status);
+
+-- Tokens da API v1. Guarda só o SHA-256: quem lê o banco não consegue usar o token.
+-- Um por dispositivo: novo login com o mesmo nome de dispositivo substitui o anterior.
+CREATE TABLE IF NOT EXISTS tokens_api (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id    INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  dispositivo   TEXT NOT NULL,
+  token_hash    TEXT NOT NULL UNIQUE,
+  criado_em     TEXT NOT NULL DEFAULT (datetime('now')),
+  ultimo_uso_em TEXT,
+  expira_em     TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tokens_usuario ON tokens_api(usuario_id);
