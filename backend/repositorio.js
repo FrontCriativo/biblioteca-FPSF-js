@@ -367,6 +367,8 @@ export function resumoAdmin() {
     retiradas: contar("SELECT COUNT(*) AS n FROM reservas WHERE status = 'retirada'"),
     atrasadas: contar(`SELECT COUNT(*) AS n FROM reservas r WHERE ${ATRASADA}`),
     usuarios: contar("SELECT COUNT(*) AS n FROM usuarios WHERE papel = 'aluno' AND ativo = 1"),
+    mensagens_novas: contar("SELECT COUNT(*) AS n FROM mensagens_contato WHERE status = 'nova'"),
+    depoimentos_pendentes: contar("SELECT COUNT(*) AS n FROM depoimentos WHERE status = 'pendente'"),
   };
 }
 
@@ -457,4 +459,58 @@ export function moderarDepoimento(id, status) {
     throw Object.assign(new Error('Depoimento não encontrado.'), { status: 404 });
   }
   return db.prepare('SELECT id, status FROM depoimentos WHERE id = ?').get(id);
+}
+
+/** Os livros da lista "Quero ler", do mais recente para o mais antigo, no formato do catálogo. */
+export function listarFavoritos(usuarioId) {
+  return db.prepare(`
+    SELECT ${COLUNAS_LIVRO}
+      FROM favoritos f
+      JOIN livros l ON l.id = f.livro_id
+      JOIN materias m ON m.slug = l.materia_slug
+     WHERE f.usuario_id = ?
+     ORDER BY f.criado_em DESC, f.id DESC
+  `).all(usuarioId);
+}
+
+export function adicionarFavorito(usuarioId, livroId) {
+  db.prepare(`
+    INSERT INTO favoritos (usuario_id, livro_id) VALUES (?, ?)
+    ON CONFLICT(usuario_id, livro_id) DO NOTHING
+  `).run(usuarioId, livroId);
+}
+
+export function removerFavorito(usuarioId, livroId) {
+  db.prepare('DELETE FROM favoritos WHERE usuario_id = ? AND livro_id = ?').run(usuarioId, livroId);
+}
+
+export function criarMensagem({ usuarioId, nome, turma, email, assunto, mensagem }) {
+  const { lastInsertRowid } = db.prepare(`
+    INSERT INTO mensagens_contato (usuario_id, nome, turma, email, assunto, mensagem)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(usuarioId ?? null, nome, turma, email, assunto, mensagem);
+  return { id: Number(lastInsertRowid), status: 'nova' };
+}
+
+/** status = null traz todas, com as novas primeiro. */
+export function listarMensagens(status = null) {
+  const filtro = status ? 'WHERE c.status = ?' : '';
+  return db.prepare(`
+    SELECT c.id, c.nome, c.turma, c.email, c.assunto, c.mensagem, c.status,
+           c.criada_em, c.atualizada_em, u.email AS usuario_email
+      FROM mensagens_contato c
+      LEFT JOIN usuarios u ON u.id = c.usuario_id
+      ${filtro}
+     ORDER BY c.status = 'nova' DESC, c.criada_em DESC, c.id DESC
+  `).all(...(status ? [status] : []));
+}
+
+export function mudarStatusMensagem(id, status) {
+  const { changes } = db.prepare(`
+    UPDATE mensagens_contato SET status = ?, atualizada_em = datetime('now') WHERE id = ?
+  `).run(status, id);
+  if (!changes) {
+    throw Object.assign(new Error('Mensagem não encontrada.'), { status: 404 });
+  }
+  return db.prepare('SELECT id, status FROM mensagens_contato WHERE id = ?').get(id);
 }

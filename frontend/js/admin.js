@@ -46,11 +46,13 @@ function iniciar() {
       });
       if (aba.dataset.aba === 'usuarios') carregarUsuarios();
       if (aba.dataset.aba === 'depoimentos') carregarDepoimentos();
+      if (aba.dataset.aba === 'mensagens') carregarMensagens();
     });
   });
 
   document.querySelector('[data-filtro-status]').addEventListener('change', carregarReservas);
   document.querySelector('[data-filtro-depoimentos]').addEventListener('change', carregarDepoimentos);
+  document.querySelector('[data-filtro-mensagens]').addEventListener('change', carregarMensagens);
   montarFormularioLivro();
   montarDialogoObservacao();
   recarregarTudo();
@@ -69,6 +71,8 @@ async function carregarResumo() {
     ['Com leitores', resumo.retiradas],
     ['Atrasados', resumo.atrasadas, resumo.atrasadas > 0],
     ['Alunos cadastrados', resumo.usuarios],
+    ['Mensagens novas', resumo.mensagens_novas],
+    ['Depoimentos pendentes', resumo.depoimentos_pendentes],
   ];
   document.querySelector('[data-resumo]').innerHTML = cartoes.map(([rotulo, valor, alerta]) => `
     <div class="stat-card${alerta ? ' stat-card--alerta' : ''}">
@@ -156,13 +160,32 @@ function montarDialogoObservacao() {
 
 document.addEventListener('click', async (evento) => {
   const alvo = evento.target.closest(
-    '[data-retirar], [data-devolver], [data-cancelar], [data-excluir], [data-add-exemplar], [data-aprovar], [data-recusar], [data-renovar], [data-desativar], [data-reativar]'
+    '[data-retirar], [data-devolver], [data-cancelar], [data-excluir], [data-add-exemplar], [data-aprovar], [data-recusar], [data-renovar], [data-desativar], [data-reativar], [data-marcar-lida], [data-responder]'
   );
   if (!alvo) return;
   alvo.disabled = true;
 
-  const { retirar, devolver, cancelar, excluir, addExemplar, aprovar, recusar, renovar, desativar, reativar, nome } = alvo.dataset;
+  const {
+    retirar, devolver, cancelar, excluir, addExemplar, aprovar, recusar, renovar, desativar, reativar, nome,
+    marcarLida, responder,
+  } = alvo.dataset;
   let ok = false;
+
+  if (marcarLida || responder) {
+    const id = marcarLida ?? responder;
+    const status = marcarLida ? 'lida' : 'respondida';
+    ok = await comFeedback(
+      () => api.mudarStatusMensagem(id, status),
+      marcarLida ? 'Mensagem marcada como lida.' : 'Mensagem marcada como respondida.',
+    );
+    alvo.disabled = false;
+    if (ok) {
+      if (responder) abrirResposta(mensagensDaTabela.get(id));
+      carregarMensagens();
+      carregarResumo();
+    }
+    return;
+  }
 
   if (desativar || reativar) {
     if (desativar && !confirm(`Desativar a conta de ${nome}? O acesso cai na hora e as pré-reservas ainda não retiradas são canceladas.`)) {
@@ -184,7 +207,10 @@ document.addEventListener('click', async (evento) => {
   if (recusar) ok = await comFeedback(() => api.recusarDepoimento(recusar), 'Depoimento recusado.');
   if (aprovar || recusar) {
     alvo.disabled = false;
-    if (ok) carregarDepoimentos();
+    if (ok) {
+      carregarDepoimentos();
+      carregarResumo();
+    }
     return;
   }
 
@@ -470,6 +496,64 @@ async function carregarDepoimentos() {
       <td class="cel-acoes">
         ${d.status !== 'aprovado' ? `<button class="mini-btn" data-aprovar="${d.id}">Aprovar</button>` : ''}
         ${d.status !== 'recusado' ? `<button class="mini-btn mini-btn--perigo" data-recusar="${d.id}">Recusar</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+const ROTULOS_MENSAGEM = {
+  nova: ['Nova', 'ativa'],
+  lida: ['Lida', 'retirada'],
+  respondida: ['Respondida', 'devolvida'],
+};
+
+// Mensagens da tabela, por id: o botão "Responder" monta o e-mail a partir daqui.
+let mensagensDaTabela = new Map();
+
+/** Quem escreveu logado pode não ter informado e-mail: vale o da conta. */
+const emailDeResposta = (m) => m.email ?? m.usuario_email;
+
+function abrirResposta(mensagem) {
+  // O e-mail vem de fora: sem codificar, um "?" nele acrescentaria campos ao mailto.
+  const destino = encodeURIComponent(emailDeResposta(mensagem)).replace('%40', '@');
+  const assunto = encodeURIComponent(`Re: ${mensagem.assunto} — Biblioteca Virtual FPSF`);
+  location.href = `mailto:${destino}?subject=${assunto}`;
+}
+
+async function carregarMensagens() {
+  const corpo = document.querySelector('[data-tabela-mensagens]');
+  const status = document.querySelector('[data-filtro-mensagens]').value;
+  let mensagens;
+  try {
+    mensagens = await api.mensagensAdmin(status);
+  } catch (erro) {
+    corpo.innerHTML = `<tr><td colspan="6" class="tabela-vazia">Não foi possível carregar: ${escaparHtml(erro.message)}</td></tr>`;
+    return;
+  }
+  mensagensDaTabela = new Map(mensagens.map((m) => [String(m.id), m]));
+
+  if (!mensagens.length) {
+    corpo.innerHTML = `<tr><td colspan="6" class="tabela-vazia">Nenhuma mensagem neste filtro.</td></tr>`;
+    return;
+  }
+
+  corpo.innerHTML = mensagens.map((m) => {
+    const [rotulo, selo] = ROTULOS_MENSAGEM[m.status];
+    const email = emailDeResposta(m);
+    return `
+    <tr>
+      <td>
+        <strong>${escaparHtml(m.nome)}</strong>
+        ${m.turma ? `<span class="cel-sub">${escaparHtml(m.turma)}</span>` : ''}
+        <span class="cel-sub">${escaparHtml(email ?? 'sem e-mail')}</span>
+      </td>
+      <td>${escaparHtml(m.assunto)}</td>
+      <td class="cel-mensagem">${escaparHtml(m.mensagem)}</td>
+      <td>${formatarData(m.criada_em)}</td>
+      <td><span class="selo selo--${selo}">${rotulo}</span></td>
+      <td class="cel-acoes">
+        ${m.status === 'nova' ? `<button class="mini-btn" data-marcar-lida="${m.id}">Marcar como lida</button>` : ''}
+        ${email ? `<button class="mini-btn" data-responder="${m.id}">Responder por e-mail</button>` : ''}
       </td>
     </tr>`;
   }).join('');

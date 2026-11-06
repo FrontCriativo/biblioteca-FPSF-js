@@ -117,3 +117,32 @@ CREATE TABLE IF NOT EXISTS depoimentos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_depoimentos_status ON depoimentos(status);
+
+-- Lista "Quero ler" de cada leitor.
+CREATE TABLE IF NOT EXISTS favoritos (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  livro_id   INTEGER NOT NULL REFERENCES livros(id) ON DELETE CASCADE,
+  criado_em  TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (usuario_id, livro_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_favoritos_livro ON favoritos(livro_id);
+
+-- Mensagens do "Fale conosco". usuario_id fica preenchido quando quem escreveu estava logado.
+CREATE TABLE IF NOT EXISTS mensagens_contato (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id    INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+  nome          TEXT NOT NULL,
+  turma         TEXT,
+  email         TEXT,
+  assunto       TEXT NOT NULL CHECK (assunto IN (
+                  'Sugestão de livro', 'Dúvida sobre empréstimo', 'Problema de acesso', 'Outro assunto'
+                )),
+  mensagem      TEXT NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'nova' CHECK (status IN ('nova', 'lida', 'respondida')),
+  criada_em     TEXT NOT NULL DEFAULT (datetime('now')),
+  atualizada_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_mensagens_status ON mensagens_contato(status);

@@ -1252,7 +1252,7 @@ button, input, textarea{
 
 .stat-grid{
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 34px;
 }
@@ -1404,6 +1404,12 @@ button, input, textarea{
 @media (max-width: 560px){
   .stat-grid{ grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Lista "Quero ler", em Minhas reservas. */
+.quero-ler{ padding-bottom: 90px; }
+.quero-ler h2{ font-size: 24px; color: var(--heading); margin-bottom: 18px; }
+.quero-ler__item{ display: flex; flex-direction: column; gap: 10px; }
+.quero-ler__acoes{ display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* Diálogo do painel (observação da reserva). */
 .dialogo{

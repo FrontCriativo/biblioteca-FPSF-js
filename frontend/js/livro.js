@@ -23,11 +23,13 @@ async function desenhar() {
   document.title = `${livro.titulo} — Biblioteca Virtual FPSF`;
 
   let minhaReserva = null;
+  let naMinhaLista = false;
   if (usuario) {
-    const reservas = await api.minhasReservas();
+    const [reservas, favoritos] = await Promise.all([api.minhasReservas(), api.favoritos()]);
     minhaReserva = reservas.find(
       (r) => r.livro_slug === livro.slug && ['ativa', 'retirada'].includes(r.status)
     ) ?? null;
+    naMinhaLista = favoritos.some((f) => f.id === livro.id);
   }
 
   const esgotado = livro.disponiveis === 0;
@@ -66,17 +68,47 @@ async function desenhar() {
     </div>`;
 
   montarAcoes(livro, minhaReserva, esgotado);
+  montarBotaoQueroLer(livro, naMinhaLista);
+}
+
+function mostrarAviso(texto, erro = false) {
+  const aviso = alvo.querySelector('[data-aviso]');
+  aviso.textContent = texto;
+  aviso.style.display = 'block';
+  aviso.style.color = erro ? '#B3261E' : 'var(--lilac-deep)';
+}
+
+function montarBotaoQueroLer(livro, naMinhaLista) {
+  const acoes = alvo.querySelector('[data-acoes]');
+
+  if (!usuario) {
+    acoes.insertAdjacentHTML('beforeend', '<a href="login.html" class="btn btn--outline">Quero ler</a>');
+    return;
+  }
+
+  acoes.insertAdjacentHTML('beforeend', '<button class="btn btn--outline" type="button" data-quero-ler></button>');
+  const botao = acoes.querySelector('[data-quero-ler]');
+  const atualizar = () => {
+    botao.textContent = naMinhaLista ? 'Na minha lista' : 'Quero ler';
+    botao.setAttribute('aria-pressed', String(naMinhaLista));
+  };
+  atualizar();
+
+  botao.addEventListener('click', async () => {
+    botao.disabled = true;
+    try {
+      await (naMinhaLista ? api.removerFavorito(livro.id) : api.adicionarFavorito(livro.id));
+      naMinhaLista = !naMinhaLista;
+      atualizar();
+    } catch (erro) {
+      mostrarAviso(erro.message, true);
+    }
+    botao.disabled = false;
+  });
 }
 
 function montarAcoes(livro, minhaReserva, esgotado) {
   const acoes = alvo.querySelector('[data-acoes]');
-  const aviso = alvo.querySelector('[data-aviso]');
-
-  const mostrarAviso = (texto, erro = false) => {
-    aviso.textContent = texto;
-    aviso.style.display = 'block';
-    aviso.style.color = erro ? '#B3261E' : 'var(--lilac-deep)';
-  };
 
   if (!usuario) {
     acoes.innerHTML = `

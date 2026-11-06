@@ -1,36 +1,33 @@
 // Biblioteca Virtual — FPSF
 // Páginas sem lógica própria: contato.
 
-import { montarSessaoNavbar } from './api.js';
+import { api, escaparHtml, montarSessaoNavbar } from './api.js';
 
 montarSessaoNavbar();
 
 const EMAIL_BIBLIOTECA = 'biblioteca@fpsf.edu.br';
 
-/* Formulário de contato: o site não envia e-mail; ele monta a mensagem e
-   abre o programa de e-mail de quem escreve, que é quem de fato envia. */
+/* Formulário de contato: a mensagem fica registrada para a coordenação ler no painel.
+   Se o envio falhar, o e-mail da biblioteca continua sendo a alternativa. */
 document.querySelectorAll('form[data-form-contato]').forEach((form) => {
-  form.addEventListener('submit', (evento) => {
+  const feedback = form.querySelector('.form-feedback');
+  const botao = form.querySelector('button[type="submit"]');
+
+  form.addEventListener('submit', async (evento) => {
     evento.preventDefault();
-    const dados = Object.fromEntries(new FormData(form));
-    const nome = dados.nome.trim();
-    const turma = dados.turma.trim();
-    const email = dados.email.trim();
-
-    const assinatura = [
-      `${nome}${turma ? ` (${turma})` : ''}`,
-      email ? `E-mail para resposta: ${email}` : '',
-    ].filter(Boolean).join('\n');
-    const assunto = `[Biblioteca Virtual] ${dados.assunto}`;
-    const corpo = `${dados.mensagem.trim()}\n\n—\n${assinatura}`;
-
-    // encodeURIComponent, e não URLSearchParams: este troca espaço por "+",
-    // que alguns programas de e-mail mostram literalmente.
-    location.href = `mailto:${EMAIL_BIBLIOTECA}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
-
-    const feedback = form.querySelector('.form-feedback');
-    feedback.innerHTML = `Abrimos o seu programa de e-mail com a mensagem pronta. Se nada abriu, escreva direto para
-      <a href="mailto:${EMAIL_BIBLIOTECA}">${EMAIL_BIBLIOTECA}</a>.`;
+    botao.disabled = true;
+    feedback.hidden = true;
+    try {
+      await api.enviarContato(Object.fromEntries(new FormData(form)));
+      form.reset();
+      feedback.classList.remove('form-feedback--erro');
+      feedback.textContent = 'Mensagem enviada. A equipe da biblioteca vai ler em breve.';
+    } catch (erro) {
+      feedback.classList.add('form-feedback--erro');
+      feedback.innerHTML = `${escaparHtml(erro.message)} Você também pode escrever para
+        <a href="mailto:${EMAIL_BIBLIOTECA}">${EMAIL_BIBLIOTECA}</a>.`;
+    }
     feedback.hidden = false;
+    botao.disabled = false;
   });
 });

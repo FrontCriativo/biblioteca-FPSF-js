@@ -56,6 +56,7 @@
     <button class="admin-tab" data-aba="acervo">Acervo</button>
     <button class="admin-tab" data-aba="usuarios">Usuários</button>
     <button class="admin-tab" data-aba="depoimentos">Depoimentos</button>
+    <button class="admin-tab" data-aba="mensagens">Mensagens</button>
   </div>
 
   <section data-painel="reservas">
@@ -213,6 +214,30 @@
           <tr><th>Autor</th><th>Nota</th><th>Depoimento</th><th>Enviado</th><th>Situação</th><th>Ações</th></tr>
         </thead>
         <tbody data-tabela-depoimentos></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section data-painel="mensagens" hidden>
+    <div class="admin-bloco__head">
+      <h2>Mensagens</h2>
+      <label class="admin-filtro">
+        Mostrar
+        <select data-filtro-mensagens>
+          <option value="nova">Novas</option>
+          <option value="lida">Lidas</option>
+          <option value="respondida">Respondidas</option>
+          <option value="todas">Todas</option>
+        </select>
+      </label>
+    </div>
+    <p class="admin-ajuda">Mensagens enviadas pelo “Fale conosco”. A resposta sai do seu programa de e-mail.</p>
+    <div class="tabela-wrap">
+      <table class="tabela">
+        <thead>
+          <tr><th>Autor</th><th>Assunto</th><th>Mensagem</th><th>Recebida</th><th>Situação</th><th>Ações</th></tr>
+        </thead>
+        <tbody data-tabela-mensagens></tbody>
       </table>
     </div>
   </section>

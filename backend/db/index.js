@@ -30,6 +30,13 @@ function colunaExiste(tabela, coluna) {
   return db.prepare(`PRAGMA table_info(${tabela})`).all().some((c) => c.name === coluna);
 }
 
+// Tabela nova vem do CREATE TABLE IF NOT EXISTS do schema.sql, que roda antes das
+// migrações. A migração só confere que ela está lá, para a versão registrar a mudança.
+function exigirTabela(tabela) {
+  const existe = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(tabela);
+  if (!existe) throw new Error(`Tabela ${tabela} ausente: confira o schema.sql.`);
+}
+
 // Migrações para bancos que já existiam antes de cada mudança.
 // O schema.sql cria um banco novo já completo; cada migração confere o que
 // falta antes de agir, então rodar sobre um banco novo não faz nada.
@@ -107,6 +114,10 @@ const MIGRACOES = [
     }
     if (!colunaExiste('reservas', 'observacao')) db.exec('ALTER TABLE reservas ADD COLUMN observacao TEXT');
   },
+  // 9 — lista "Quero ler".
+  () => exigirTabela('favoritos'),
+  // 10 — mensagens do "Fale conosco".
+  () => exigirTabela('mensagens_contato'),
 ];
 
 function migrar() {

@@ -43,6 +43,12 @@ export const api = {
   cancelarReserva: (id) => pedir(`/reservas/${id}/cancelar`, { metodo: 'POST' }),
   renovarReserva: (id) => pedir(`/reservas/${id}/renovar`, { metodo: 'POST' }),
 
+  favoritos: () => pedir('/favoritos'),
+  adicionarFavorito: (livroId) => pedir(`/favoritos/${livroId}`, { metodo: 'PUT' }),
+  removerFavorito: (livroId) => pedir(`/favoritos/${livroId}`, { metodo: 'DELETE' }),
+
+  enviarContato: (dados) => pedir('/contato', { metodo: 'POST', corpo: dados }),
+
   resumo: () => pedir('/admin/resumo'),
   todasReservas: (status) => {
     const sufixo = status && status !== 'todas' ? `?status=${status}` : '';
@@ -68,6 +74,13 @@ export const api = {
   },
   aprovarDepoimento: (id) => pedir(`/admin/depoimentos/${id}/aprovar`, { metodo: 'POST' }),
   recusarDepoimento: (id) => pedir(`/admin/depoimentos/${id}/recusar`, { metodo: 'POST' }),
+
+  mensagensAdmin: (status) => {
+    const sufixo = status && status !== 'todas' ? `?status=${status}` : '';
+    return pedir(`/admin/mensagens${sufixo}`);
+  },
+  mudarStatusMensagem: (id, status) =>
+    pedir(`/admin/mensagens/${id}/status`, { metodo: 'POST', corpo: { status } }),
 };
 
 export function escaparHtml(texto) {

@@ -57,7 +57,7 @@
         </li>
         <li>
           <img src="assets/gmail.png" alt="">
-          <div><strong>E-mail</strong>biblioteca@fpsf.edu.br</div>
+          <div><strong>E-mail</strong><a href="mailto:biblioteca@fpsf.edu.br">biblioteca@fpsf.edu.br</a></div>
         </li>
         <li>
           <img src="assets/calendario.png" alt="">
@@ -75,18 +75,18 @@
         <div class="field-row">
           <div class="field">
             <label for="nome">Nome</label>
-            <input type="text" id="nome" name="nome" placeholder="Seu nome completo" required>
+            <input type="text" id="nome" name="nome" maxlength="80" placeholder="Seu nome completo" required>
           </div>
           <div class="field">
             <label for="turma">Turma ou função</label>
-            <input type="text" id="turma" name="turma" placeholder="Ex.: 8º ano B, professor, responsável">
+            <input type="text" id="turma" name="turma" maxlength="40" placeholder="Ex.: 8º ano B, professor, responsável">
           </div>
         </div>
 
         <div class="field-row">
           <div class="field">
             <label for="email-contato">E-mail para resposta (opcional)</label>
-            <input type="email" id="email-contato" name="email" placeholder="seunome@email.com">
+            <input type="email" id="email-contato" name="email" maxlength="120" placeholder="seunome@email.com">
           </div>
           <div class="field">
             <label for="assunto-contato">Assunto</label>
@@ -101,11 +101,11 @@
 
         <div class="field">
           <label for="mensagem">Mensagem</label>
-          <textarea id="mensagem" name="mensagem" placeholder="Conte com detalhes o que você precisa" required></textarea>
+          <textarea id="mensagem" name="mensagem" maxlength="2000" placeholder="Conte com detalhes o que você precisa" required></textarea>
         </div>
 
-        <p class="contato-nota">O botão abre o seu programa de e-mail com a mensagem pronta, endereçada a biblioteca@fpsf.edu.br. É só conferir e enviar.</p>
-        <button type="submit" class="btn btn--lilac">Abrir no meu e-mail</button>
+        <p class="contato-nota">A mensagem vai direto para a equipe da biblioteca. Para receber resposta, deixe um e-mail. Se preferir, escreva para <a href="mailto:biblioteca@fpsf.edu.br">biblioteca@fpsf.edu.br</a>.</p>
+        <button type="submit" class="btn btn--lilac">Enviar mensagem</button>
         <p class="form-feedback" hidden></p>
       </form>
     </div>

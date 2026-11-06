@@ -89,6 +89,12 @@ const enviosDepoimento = criarLimitador({ janelaMs: 60 * 60 * 1000, maximo: 20 }
 
 const STATUS_DEPOIMENTO = ['pendente', 'aprovado', 'recusado'];
 
+// Mesma lógica dos depoimentos, com contagem própria: a escola inteira sai pelo mesmo IP.
+const enviosContato = criarLimitador({ janelaMs: 60 * 60 * 1000, maximo: 20 });
+
+const ASSUNTOS_CONTATO = ['Sugestão de livro', 'Dúvida sobre empréstimo', 'Problema de acesso', 'Outro assunto'];
+const STATUS_MENSAGEM = ['nova', 'lida', 'respondida'];
+
 export function inteiroPositivo(valor, campo, padrao = null) {
   if (valor === undefined || valor === '') {
     if (padrao !== null) return padrao;
@@ -283,6 +289,25 @@ const rotas = {
     return { corpo: repo.mudarStatusReserva(id, 'cancelada', dono) };
   },
 
+  'GET /api/favoritos': (req) => {
+    const usuario = exigirLogin(req);
+    return { corpo: repo.listarFavoritos(usuario.id) };
+  },
+
+  'PUT /api/favoritos/:livroId': (req, { params }) => {
+    const usuario = exigirLogin(req);
+    const livroId = inteiroPositivo(params.livroId, 'livroId');
+    if (!repo.livroExiste(livroId)) throw new ErroHttp(404, 'Livro não encontrado.');
+    repo.adicionarFavorito(usuario.id, livroId);
+    return { corpo: { ok: true } };
+  },
+
+  'DELETE /api/favoritos/:livroId': (req, { params }) => {
+    const usuario = exigirLogin(req);
+    repo.removerFavorito(usuario.id, inteiroPositivo(params.livroId, 'livroId'));
+    return { corpo: { ok: true } };
+  },
+
   'POST /api/reservas/:id/renovar': (req, { params }) => {
     const usuario = exigirLogin(req);
     return { corpo: repo.renovarReserva(inteiroPositivo(params.id, 'id'), usuario.id) };
@@ -399,6 +424,36 @@ const rotas = {
     }
     // Sempre entra como pendente: só aparece no site depois da moderação.
     return { corpo: repo.criarDepoimento(dados), status: 201 };
+  },
+
+  'POST /api/contato': (req, { corpo }) => {
+    const assunto = campoObrigatorio(corpo, 'assunto');
+    if (!ASSUNTOS_CONTATO.includes(assunto)) throw new ErroValidacao('Escolha um assunto da lista.');
+    const dados = {
+      nome: textoLimitado(corpo, 'nome', 80),
+      turma: textoOpcional(corpo, 'turma', 40),
+      email: textoOpcional(corpo, 'email', 120) && emailValido(corpo, 'email', 120),
+      assunto,
+      mensagem: textoLimitado(corpo, 'mensagem', 2000),
+      usuarioId: usuarioDaSessao(lerCookie(req, 'sessao'))?.id,
+    };
+    if (!enviosContato.consumir(ipDe(req))) {
+      throw new ErroHttp(429, 'Muitas mensagens enviadas daqui. Tente de novo mais tarde.');
+    }
+    return { corpo: repo.criarMensagem(dados), status: 201 };
+  },
+
+  'GET /api/admin/mensagens': (req, { query }) => {
+    exigirAdmin(req);
+    const status = query.get('status');
+    return { corpo: repo.listarMensagens(STATUS_MENSAGEM.includes(status) ? status : null) };
+  },
+
+  'POST /api/admin/mensagens/:id/status': (req, { corpo, params }) => {
+    exigirAdmin(req);
+    const status = campoObrigatorio(corpo, 'status');
+    if (!STATUS_MENSAGEM.includes(status)) throw new ErroValidacao('Status inválido.');
+    return { corpo: repo.mudarStatusMensagem(inteiroPositivo(params.id, 'id'), status) };
   },
 
   'GET /api/admin/depoimentos': (req, { query }) => {
