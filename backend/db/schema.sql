@@ -6,9 +6,22 @@
 --
 -- Este arquivo descreve um banco novo, completo. Mudanças em bancos que
 -- já existem são feitas pelas migrações em db/index.js.
+--
+-- Ele também roda em bancos antigos, antes das migrações. Por isso não pode ter
+-- índice sobre coluna nova de tabela que já existia: a coluna ainda não estaria lá.
 
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
+
+-- O limite de 40 caracteres do nome é conferido em rotas.js. Não é um CHECK porque
+-- turmas de bancos antigos, vindas de texto livre, podem ser maiores.
+CREATE TABLE IF NOT EXISTS turmas (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  nome       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  ano_letivo INTEGER,
+  ativa      INTEGER NOT NULL DEFAULT 1,
+  criada_em  TEXT NOT NULL DEFAULT (datetime('now'))
+);
 
 CREATE TABLE IF NOT EXISTS usuarios (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,10 +29,12 @@ CREATE TABLE IF NOT EXISTS usuarios (
   email       TEXT NOT NULL UNIQUE COLLATE NOCASE,
   senha_hash  TEXT NOT NULL,
   papel       TEXT NOT NULL DEFAULT 'aluno' CHECK (papel IN ('aluno', 'admin')),
-  turma       TEXT,
   criado_em   TEXT NOT NULL DEFAULT (datetime('now')),
   -- 1 = senha provisória (seed ou definida pela coordenação): trocar no próximo acesso.
-  trocar_senha INTEGER NOT NULL DEFAULT 0
+  trocar_senha INTEGER NOT NULL DEFAULT 0,
+  turma_id    INTEGER REFERENCES turmas(id) ON DELETE SET NULL,
+  -- 0 = conta desativada pela coordenação: não entra nem mantém sessão.
+  ativo       INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS materias (
@@ -64,7 +79,11 @@ CREATE TABLE IF NOT EXISTS reservas (
   expira_em    TEXT NOT NULL,
   encerrada_em TEXT,
   -- Prazo de devolução, gravado quando a reserva vira 'retirada'.
-  devolver_ate TEXT
+  devolver_ate TEXT,
+  retirada_em  TEXT,
+  renovacoes   INTEGER NOT NULL DEFAULT 0,
+  -- Anotação interna da coordenação: nunca sai nas rotas do aluno.
+  observacao   TEXT
 );
 
 -- Invariante central: um exemplar só pode ter UMA reserva não-encerrada.

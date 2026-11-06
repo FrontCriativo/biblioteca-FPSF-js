@@ -1375,6 +1375,7 @@ button, input, textarea{
 .cel-livro strong{ display: block; font-size: 14px; color: var(--heading); }
 .cel-livro span{ font-size: 12px; color: var(--ink-soft); }
 .cel-sub{ display: block; font-size: 12px; color: var(--ink-soft); }
+.cel-observacao{ margin-top: 6px; max-width: 220px; overflow-wrap: anywhere; font-style: italic; }
 .cel-acoes{ display: flex; gap: 8px; flex-wrap: wrap; }
 .cel-mensagem{ min-width: 260px; max-width: 420px; white-space: pre-line; }
 .admin-ajuda{ font-size: 13.5px; color: var(--ink-soft); margin: -8px 0 18px; }
@@ -1403,3 +1404,16 @@ button, input, textarea{
 @media (max-width: 560px){
   .stat-grid{ grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Diálogo do painel (observação da reserva). */
+.dialogo{
+  margin: auto;
+  width: min(460px, 92vw);
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--card);
+  color: inherit;
+}
+.dialogo::backdrop{ background: rgb(0 0 0 / .45); }
+.dialogo h3{ font-size: 19px; color: var(--heading); margin-bottom: 6px; }

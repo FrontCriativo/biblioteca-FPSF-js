@@ -5,9 +5,30 @@ const DIAS_PARA_RETIRAR = 3;
 const DIAS_PARA_DEVOLVER = 14;
 // Reservas simultâneas (ativa + retirada) que um aluno pode ter. A coordenação não tem limite.
 export const LIMITE_RESERVAS_ALUNO = 3;
+// Cada renovação soma estes dias ao prazo. Só a coordenação passa do limite de vezes.
+export const DIAS_RENOVACAO = 7;
+export const LIMITE_RENOVACOES_ALUNO = 1;
 
 // Livro retirado cujo prazo de devolução já passou.
 const ATRASADA = "r.status = 'retirada' AND r.devolver_ate < datetime('now')";
+
+// Empréstimo antigo sem prazo (devolver_ate NULL) nunca está atrasado: pode renovar.
+const PODE_RENOVAR = `r.status = 'retirada' AND r.renovacoes < ${LIMITE_RENOVACOES_ALUNO}
+  AND (r.devolver_ate IS NULL OR r.devolver_ate >= datetime('now'))`;
+
+const NOVO_PRAZO = `datetime(COALESCE(r.devolver_ate, 'now'), '+${DIAS_RENOVACAO} days')`;
+
+const COLUNAS_RESERVA = `
+  r.id, r.status, r.criada_em, r.expira_em, r.encerrada_em, r.devolver_ate,
+  r.retirada_em, r.renovacoes,
+  (${ATRASADA}) AS atrasada,
+  e.codigo AS exemplar_codigo,
+  l.slug AS livro_slug, l.titulo, l.autor, l.capa`;
+
+// Para o aluno: se pode renovar e até quando o prazo iria, para a tela confirmar antes.
+const COLUNAS_RENOVACAO = `
+  (${PODE_RENOVAR}) AS pode_renovar,
+  CASE WHEN ${PODE_RENOVAR} THEN ${NOVO_PRAZO} END AS novo_prazo`;
 
 // Extended result code do SQLite para violação de índice único.
 const SQLITE_CONSTRAINT_UNIQUE = 2067;
@@ -181,27 +202,24 @@ export function criarReserva(livroId, usuarioId, { limite = LIMITE_RESERVAS_ALUN
   });
 }
 
-export function buscarReserva(id) {
+/** comObservacao: só nas respostas à coordenação; a anotação é interna. */
+export function buscarReserva(id, { comObservacao = false } = {}) {
   return db.prepare(`
-    SELECT r.id, r.status, r.criada_em, r.expira_em, r.encerrada_em, r.devolver_ate,
-           (${ATRASADA}) AS atrasada,
-           e.codigo AS exemplar_codigo,
-           l.slug AS livro_slug, l.titulo, l.autor, l.capa,
-           u.nome AS usuario_nome, u.email AS usuario_email, u.turma
+    SELECT ${COLUNAS_RESERVA}, ${COLUNAS_RENOVACAO},
+           ${comObservacao ? 'r.observacao,' : ''}
+           u.nome AS usuario_nome, u.email AS usuario_email, t.nome AS turma
       FROM reservas r
       JOIN exemplares e ON e.id = r.exemplar_id
       JOIN livros l ON l.id = e.livro_id
       JOIN usuarios u ON u.id = r.usuario_id
+      LEFT JOIN turmas t ON t.id = u.turma_id
      WHERE r.id = ?
   `).get(id) ?? null;
 }
 
 export function listarReservasDoUsuario(usuarioId) {
   return db.prepare(`
-    SELECT r.id, r.status, r.criada_em, r.expira_em, r.devolver_ate,
-           (${ATRASADA}) AS atrasada,
-           e.codigo AS exemplar_codigo,
-           l.slug AS livro_slug, l.titulo, l.autor, l.capa
+    SELECT ${COLUNAS_RESERVA}, ${COLUNAS_RENOVACAO}
       FROM reservas r
       JOIN exemplares e ON e.id = r.exemplar_id
       JOIN livros l ON l.id = e.livro_id
@@ -220,15 +238,13 @@ export function listarTodasReservas(status) {
     params = [status];
   }
   return db.prepare(`
-    SELECT r.id, r.status, r.criada_em, r.expira_em, r.encerrada_em, r.devolver_ate,
-           (${ATRASADA}) AS atrasada,
-           e.codigo AS exemplar_codigo,
-           l.slug AS livro_slug, l.titulo, l.autor, l.capa,
-           u.nome AS usuario_nome, u.email AS usuario_email, u.turma
+    SELECT ${COLUNAS_RESERVA}, r.observacao,
+           u.nome AS usuario_nome, u.email AS usuario_email, t.nome AS turma
       FROM reservas r
       JOIN exemplares e ON e.id = r.exemplar_id
       JOIN livros l ON l.id = e.livro_id
       JOIN usuarios u ON u.id = r.usuario_id
+      LEFT JOIN turmas t ON t.id = u.turma_id
       ${filtro}
      ORDER BY r.criada_em DESC
   `).all(...params);
@@ -278,10 +294,59 @@ export function mudarStatusReserva(id, novoStatus, usuarioId = null) {
     UPDATE reservas
        SET status = ?,
            encerrada_em = ${retira ? 'NULL' : "datetime('now')"}
-           ${retira ? `, devolver_ate = datetime('now', '+${DIAS_PARA_DEVOLVER} days')` : ''}
+           ${retira ? `, retirada_em = datetime('now'),
+                        devolver_ate = datetime('now', '+${DIAS_PARA_DEVOLVER} days')` : ''}
      WHERE id = ?
   `).run(novoStatus, id);
-  return buscarReserva(id);
+  return buscarReserva(id, { comObservacao: usuarioId === null });
+}
+
+/** usuarioId = null: ação da coordenação, sem limite de vezes e valendo para atrasada. */
+export function renovarReserva(id, usuarioId = null) {
+  const atual = db.prepare(`
+    SELECT r.status, r.usuario_id, r.renovacoes, (${ATRASADA}) AS atrasada
+      FROM reservas r
+     WHERE r.id = ?
+  `).get(id);
+  if (!atual) {
+    throw Object.assign(new Error('Reserva não encontrada.'), { status: 404 });
+  }
+  if (usuarioId !== null && atual.usuario_id !== usuarioId) {
+    throw Object.assign(new Error('Esta reserva não é sua.'), { status: 403 });
+  }
+  if (atual.status !== 'retirada') {
+    throw Object.assign(new Error('Só é possível renovar um livro que está com o leitor.'), { status: 409 });
+  }
+  if (usuarioId !== null && atual.atrasada) {
+    throw Object.assign(new Error('Este empréstimo está atrasado. Procure a biblioteca para renovar.'), { status: 409 });
+  }
+  if (usuarioId !== null && atual.renovacoes >= LIMITE_RENOVACOES_ALUNO) {
+    throw Object.assign(new Error('Este empréstimo já foi renovado. Procure a biblioteca.'), { status: 409 });
+  }
+  db.prepare(`
+    UPDATE reservas AS r
+       SET devolver_ate = ${NOVO_PRAZO}, renovacoes = r.renovacoes + 1
+     WHERE r.id = ?
+  `).run(id);
+  return buscarReserva(id, { comObservacao: usuarioId === null });
+}
+
+/** texto = null apaga a anotação. */
+export function definirObservacao(id, texto) {
+  const { changes } = db.prepare('UPDATE reservas SET observacao = ? WHERE id = ?').run(texto, id);
+  if (!changes) {
+    throw Object.assign(new Error('Reserva não encontrada.'), { status: 404 });
+  }
+  return buscarReserva(id, { comObservacao: true });
+}
+
+/** Devolve quantas reservas foram canceladas. As retiradas ficam: o livro ainda está com a pessoa. */
+export function cancelarReservasAtivasDoUsuario(usuarioId) {
+  return db.prepare(`
+    UPDATE reservas
+       SET status = 'cancelada', encerrada_em = datetime('now')
+     WHERE usuario_id = ? AND status = 'ativa'
+  `).run(usuarioId).changes;
 }
 
 export function expirarReservasVencidas() {
@@ -301,18 +366,58 @@ export function resumoAdmin() {
     reservas_ativas: contar("SELECT COUNT(*) AS n FROM reservas WHERE status = 'ativa'"),
     retiradas: contar("SELECT COUNT(*) AS n FROM reservas WHERE status = 'retirada'"),
     atrasadas: contar(`SELECT COUNT(*) AS n FROM reservas r WHERE ${ATRASADA}`),
-    usuarios: contar("SELECT COUNT(*) AS n FROM usuarios WHERE papel = 'aluno'"),
+    usuarios: contar("SELECT COUNT(*) AS n FROM usuarios WHERE papel = 'aluno' AND ativo = 1"),
   };
 }
 
 export function listarUsuarios() {
   return db.prepare(`
-    SELECT u.id, u.nome, u.email, u.papel, u.turma, u.criado_em,
+    SELECT u.id, u.nome, u.email, u.papel, t.nome AS turma, u.ativo, u.criado_em,
            (SELECT COUNT(*) FROM reservas r
              WHERE r.usuario_id = u.id AND r.status IN ('ativa', 'retirada')) AS reservas_ativas
       FROM usuarios u
+      LEFT JOIN turmas t ON t.id = u.turma_id
      ORDER BY u.nome
   `).all();
+}
+
+export function usuarioExiste(id) {
+  return Boolean(db.prepare('SELECT 1 FROM usuarios WHERE id = ?').get(id));
+}
+
+/** nome: da turma, em texto. Devolve o usuário com o nome da turma como está cadastrado. */
+export function criarUsuario({ nome, email, senhaHash, papel, turma }) {
+  return transacao(() => {
+    const registro = turma ? buscarOuCriarTurma(turma) : null;
+    // A senha cadastrada pela coordenação é provisória: o usuário troca no primeiro acesso.
+    const { lastInsertRowid } = db.prepare(`
+      INSERT INTO usuarios (nome, email, senha_hash, papel, turma_id, trocar_senha)
+      VALUES (?, ?, ?, ?, ?, 1)
+    `).run(nome, email, senhaHash, papel, registro?.id ?? null);
+    return { id: Number(lastInsertRowid), nome, email, papel, turma: registro?.nome ?? null };
+  });
+}
+
+export function definirContaAtiva(id, ativo) {
+  db.prepare('UPDATE usuarios SET ativo = ? WHERE id = ?').run(ativo ? 1 : 0, id);
+}
+
+export function listarTurmas() {
+  return db.prepare(`
+    SELECT id, nome, ano_letivo, ativa
+      FROM turmas
+     WHERE ativa = 1
+     ORDER BY nome
+  `).all();
+}
+
+/** O nome não diferencia maiúsculas: "8º ANO B" encontra "8º ano B". */
+export function buscarOuCriarTurma(nome) {
+  db.prepare(`
+    INSERT INTO turmas (nome, ano_letivo) VALUES (?, ?)
+    ON CONFLICT(nome) DO NOTHING
+  `).run(nome, new Date().getFullYear());
+  return db.prepare('SELECT id, nome FROM turmas WHERE nome = ?').get(nome);
 }
 
 export function criarDepoimento({ usuarioId, nome, turma, mensagem, nota }) {

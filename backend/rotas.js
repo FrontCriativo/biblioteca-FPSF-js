@@ -2,7 +2,7 @@ import {
   criarHashSenha, conferirSenha, abrirSessao, encerrarSessao,
   usuarioDaSessao, lerCookie, cabecalhoCookieSessao, cookieSessaoExpirado,
   loginBloqueado, registrarFalhaLogin, limparFalhasLogin,
-  definirSenha, encerrarSessoesDoUsuario,
+  definirSenha, encerrarSessoesDoUsuario, buscarContaPorEmail,
 } from './auth.js';
 import { existsSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +20,8 @@ const FORMATOS_CAPA = [
   { ext: '.png', confere: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
   { ext: '.webp', confere: (b) => b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP' },
 ];
+
+export const MENSAGEM_CONTA_DESATIVADA = 'Conta desativada. Procure a coordenação.';
 
 /** permitirTrocaPendente: rotas que a conta com senha provisória ainda pode usar. */
 function exigirLogin(req, { permitirTrocaPendente = false } = {}) {
@@ -148,12 +150,14 @@ const rotas = {
     if (loginBloqueado(email, ip)) {
       throw new ErroHttp(429, 'Muitas tentativas. Tente de novo em alguns minutos.');
     }
-    const usuario = db.prepare('SELECT * FROM usuarios WHERE email = ?').get(email);
+    const usuario = buscarContaPorEmail(email);
     if (!usuario || !conferirSenha(senha, usuario.senha_hash)) {
       registrarFalhaLogin(email, ip);
       throw new ErroHttp(401, 'E-mail ou senha incorretos.');
     }
     limparFalhasLogin(email);
+    // Só depois da senha: a resposta não pode revelar quais e-mails existem.
+    if (!usuario.ativo) throw new ErroHttp(403, MENSAGEM_CONTA_DESATIVADA);
     const token = abrirSessao(usuario.id);
     return {
       corpo: {
@@ -279,6 +283,11 @@ const rotas = {
     return { corpo: repo.mudarStatusReserva(id, 'cancelada', dono) };
   },
 
+  'POST /api/reservas/:id/renovar': (req, { params }) => {
+    const usuario = exigirLogin(req);
+    return { corpo: repo.renovarReserva(inteiroPositivo(params.id, 'id'), usuario.id) };
+  },
+
   'GET /api/admin/resumo': (req) => {
     exigirAdmin(req);
     return { corpo: repo.resumoAdmin() };
@@ -299,6 +308,23 @@ const rotas = {
     return { corpo: repo.mudarStatusReserva(inteiroPositivo(params.id, 'id'), 'devolvida') };
   },
 
+  'POST /api/admin/reservas/:id/renovar': (req, { params }) => {
+    exigirAdmin(req);
+    return { corpo: repo.renovarReserva(inteiroPositivo(params.id, 'id')) };
+  },
+
+  'PUT /api/admin/reservas/:id/observacao': (req, { corpo, params }) => {
+    exigirAdmin(req);
+    if (!('observacao' in corpo)) throw new ErroValidacao('O campo "observacao" é obrigatório.');
+    const observacao = textoOpcional(corpo, 'observacao', 500);
+    return { corpo: repo.definirObservacao(inteiroPositivo(params.id, 'id'), observacao) };
+  },
+
+  'GET /api/admin/turmas': (req) => {
+    exigirAdmin(req);
+    return { corpo: repo.listarTurmas() };
+  },
+
   'GET /api/admin/usuarios': (req) => {
     exigirAdmin(req);
     return { corpo: repo.listarUsuarios() };
@@ -314,12 +340,7 @@ const rotas = {
     if (db.prepare('SELECT 1 FROM usuarios WHERE email = ?').get(email)) {
       throw new ErroHttp(409, 'Já existe um usuário com esse e-mail.');
     }
-    // A senha cadastrada pela coordenação é provisória: o usuário troca no primeiro acesso.
-    const { lastInsertRowid } = db.prepare(`
-      INSERT INTO usuarios (nome, email, senha_hash, papel, turma, trocar_senha)
-      VALUES (?, ?, ?, ?, ?, 1)
-    `).run(nome, email, criarHashSenha(senha), papel, turma);
-    return { corpo: { id: Number(lastInsertRowid), nome, email, papel, turma }, status: 201 };
+    return { corpo: repo.criarUsuario({ nome, email, senhaHash: criarHashSenha(senha), papel, turma }), status: 201 };
   },
 
   'POST /api/admin/usuarios/:id/senha': (req, { corpo, params }) => {
@@ -336,6 +357,27 @@ const rotas = {
       definirSenha(id, senha, { trocarSenha: true });
       encerrarSessoesDoUsuario(id);
     });
+    return { corpo: { ok: true } };
+  },
+
+  'POST /api/admin/usuarios/:id/desativar': (req, { params }) => {
+    const admin = exigirAdmin(req);
+    const id = inteiroPositivo(params.id, 'id');
+    if (id === admin.id) throw new ErroHttp(400, 'Você não pode desativar a própria conta.');
+    if (!repo.usuarioExiste(id)) throw new ErroHttp(404, 'Usuário não encontrado.');
+    const reservasCanceladas = transacao(() => {
+      repo.definirContaAtiva(id, false);
+      encerrarSessoesDoUsuario(id);
+      return repo.cancelarReservasAtivasDoUsuario(id);
+    });
+    return { corpo: { ok: true, reservas_canceladas: reservasCanceladas } };
+  },
+
+  'POST /api/admin/usuarios/:id/reativar': (req, { params }) => {
+    exigirAdmin(req);
+    const id = inteiroPositivo(params.id, 'id');
+    if (!repo.usuarioExiste(id)) throw new ErroHttp(404, 'Usuário não encontrado.');
+    repo.definirContaAtiva(id, true);
     return { corpo: { ok: true } };
   },
 

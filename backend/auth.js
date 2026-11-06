@@ -43,13 +43,25 @@ export function definirSenha(usuarioId, senha, { trocarSenha }) {
     .run(criarHashSenha(senha), trocarSenha ? 1 : 0, usuarioId);
 }
 
+/** A conta com a senha, para conferir o login. Inclui as desativadas: quem decide é a rota. */
+export function buscarContaPorEmail(email) {
+  return db.prepare(
+    `SELECT u.*, t.nome AS turma
+       FROM usuarios u
+       LEFT JOIN turmas t ON t.id = u.turma_id
+      WHERE u.email = ?`
+  ).get(email) ?? null;
+}
+
+// Filtrar u.ativo aqui faz a desativação valer na hora, mesmo para uma sessão aberta.
 export function usuarioDaSessao(token) {
   if (!token) return null;
   return db.prepare(
-    `SELECT u.id, u.nome, u.email, u.papel, u.turma, u.trocar_senha
+    `SELECT u.id, u.nome, u.email, u.papel, t.nome AS turma, u.trocar_senha
        FROM sessoes s
        JOIN usuarios u ON u.id = s.usuario_id
-      WHERE s.token = ? AND s.expira_em > datetime('now')`
+       LEFT JOIN turmas t ON t.id = u.turma_id
+      WHERE s.token = ? AND s.expira_em > datetime('now') AND u.ativo = 1`
   ).get(token) ?? null;
 }
 

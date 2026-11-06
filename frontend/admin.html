@@ -169,7 +169,8 @@
         </div>
         <div class="field">
           <label for="u-turma">Turma</label>
-          <input id="u-turma" name="turma" maxlength="40" placeholder="ex.: 8º ano B">
+          <input id="u-turma" name="turma" maxlength="40" list="lista-turmas" placeholder="ex.: 8º ano B">
+          <datalist id="lista-turmas" data-lista-turmas></datalist>
         </div>
       </div>
       <div class="field">
@@ -185,7 +186,7 @@
     <div class="tabela-wrap">
       <table class="tabela">
         <thead>
-          <tr><th>Nome</th><th>E-mail</th><th>Turma</th><th>Perfil</th><th>Reservas ativas</th></tr>
+          <tr><th>Nome</th><th>E-mail</th><th>Turma</th><th>Perfil</th><th>Reservas ativas</th><th>Situação</th><th>Ações</th></tr>
         </thead>
         <tbody data-tabela-usuarios></tbody>
       </table>
@@ -215,6 +216,21 @@
       </table>
     </div>
   </section>
+
+  <dialog class="dialogo" data-dialogo-observacao>
+    <form data-form-observacao>
+      <h3>Observação</h3>
+      <p class="admin-ajuda" data-observacao-livro></p>
+      <div class="field">
+        <label for="observacao-texto">Anotação interna (o aluno não vê)</label>
+        <textarea id="observacao-texto" name="observacao" rows="4" maxlength="500"></textarea>
+      </div>
+      <div class="admin-form__acoes">
+        <button class="btn btn--lilac" type="submit">Salvar</button>
+        <button class="btn btn--outline" type="button" data-fechar-observacao>Cancelar</button>
+      </div>
+    </form>
+  </dialog>
 
 </main>
 

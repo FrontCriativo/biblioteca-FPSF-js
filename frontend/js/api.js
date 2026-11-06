@@ -41,6 +41,7 @@ export const api = {
   minhasReservas: () => pedir('/reservas'),
   reservar: (livroId) => pedir('/reservas', { metodo: 'POST', corpo: { livro_id: livroId } }),
   cancelarReserva: (id) => pedir(`/reservas/${id}/cancelar`, { metodo: 'POST' }),
+  renovarReserva: (id) => pedir(`/reservas/${id}/renovar`, { metodo: 'POST' }),
 
   resumo: () => pedir('/admin/resumo'),
   todasReservas: (status) => {
@@ -49,9 +50,15 @@ export const api = {
   },
   marcarRetirada: (id) => pedir(`/admin/reservas/${id}/retirar`, { metodo: 'POST' }),
   marcarDevolvida: (id) => pedir(`/admin/reservas/${id}/devolver`, { metodo: 'POST' }),
+  renovarEmprestimo: (id) => pedir(`/admin/reservas/${id}/renovar`, { metodo: 'POST' }),
+  salvarObservacao: (id, observacao) =>
+    pedir(`/admin/reservas/${id}/observacao`, { metodo: 'PUT', corpo: { observacao } }),
   enviarCapa: (nome, dados) => pedir('/admin/capas', { metodo: 'POST', corpo: { nome, dados } }),
   usuarios: () => pedir('/admin/usuarios'),
   criarUsuario: (dados) => pedir('/admin/usuarios', { metodo: 'POST', corpo: dados }),
+  desativarUsuario: (id) => pedir(`/admin/usuarios/${id}/desativar`, { metodo: 'POST' }),
+  reativarUsuario: (id) => pedir(`/admin/usuarios/${id}/reativar`, { metodo: 'POST' }),
+  turmas: () => pedir('/admin/turmas'),
 
   depoimentos: () => pedir('/depoimentos'),
   enviarDepoimento: (dados) => pedir('/depoimentos', { metodo: 'POST', corpo: dados }),

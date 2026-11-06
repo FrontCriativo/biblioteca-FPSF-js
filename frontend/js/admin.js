@@ -23,10 +23,11 @@ function aviso(texto, erro = false) {
   aviso.id = setTimeout(() => { caixa.style.display = 'none'; }, 4000);
 }
 
+/** mensagemOk pode ser uma função, para montar o texto com o resultado da ação. */
 async function comFeedback(acao, mensagemOk) {
   try {
-    await acao();
-    aviso(mensagemOk);
+    const resultado = await acao();
+    aviso(typeof mensagemOk === 'function' ? mensagemOk(resultado) : mensagemOk);
     return true;
   } catch (erro) {
     aviso(erro.message, true);
@@ -51,6 +52,7 @@ function iniciar() {
   document.querySelector('[data-filtro-status]').addEventListener('change', carregarReservas);
   document.querySelector('[data-filtro-depoimentos]').addEventListener('change', carregarDepoimentos);
   montarFormularioLivro();
+  montarDialogoObservacao();
   recarregarTudo();
 }
 
@@ -75,9 +77,13 @@ async function carregarResumo() {
     </div>`).join('');
 }
 
+// Reservas da tabela, por id: o botão "Observação" abre o diálogo a partir daqui.
+let reservasDaTabela = new Map();
+
 async function carregarReservas() {
   const status = document.querySelector('[data-filtro-status]').value;
   const reservas = await api.todasReservas(status);
+  reservasDaTabela = new Map(reservas.map((r) => [String(r.id), r]));
   const corpo = document.querySelector('[data-tabela-reservas]');
 
   if (!reservas.length) {
@@ -105,26 +111,74 @@ async function carregarReservas() {
       <td${r.atrasada ? ' class="prazo-atrasado"' : ''}>
         ${r.status === 'retirada' && r.devolver_ate ? formatarData(r.devolver_ate) : '—'}
         ${r.atrasada ? '<span class="cel-sub prazo-atrasado">atrasado</span>' : ''}
+        ${r.retirada_em ? `<span class="cel-sub">retirado em ${formatarData(r.retirada_em)}</span>` : ''}
+        ${r.renovacoes ? `<span class="cel-sub">${r.renovacoes} ${r.renovacoes === 1 ? 'renovação' : 'renovações'}</span>` : ''}
       </td>
-      <td><span class="selo selo--${r.status}">${ROTULOS_STATUS[r.status]}</span></td>
+      <td>
+        <span class="selo selo--${r.status}">${ROTULOS_STATUS[r.status]}</span>
+        ${r.observacao ? `<span class="cel-sub cel-observacao">${escaparHtml(r.observacao)}</span>` : ''}
+      </td>
       <td class="cel-acoes">
         ${r.status === 'ativa' ? `<button class="mini-btn" data-retirar="${r.id}">Retirado</button>` : ''}
         ${r.status === 'retirada' ? `<button class="mini-btn" data-devolver="${r.id}">Devolvido</button>` : ''}
+        ${r.status === 'retirada' ? `<button class="mini-btn" data-renovar="${r.id}">Renovar</button>` : ''}
+        <button class="mini-btn" data-observacao="${r.id}">Observação</button>
         ${['ativa', 'retirada'].includes(r.status)
           ? `<button class="mini-btn mini-btn--perigo" data-cancelar="${r.id}">Cancelar</button>` : ''}
       </td>
     </tr>`).join('');
 }
 
+function montarDialogoObservacao() {
+  const dialogo = document.querySelector('[data-dialogo-observacao]');
+  const form = dialogo.querySelector('form');
+  let reserva = null;
+
+  document.querySelector('[data-tabela-reservas]').addEventListener('click', (evento) => {
+    const botao = evento.target.closest('[data-observacao]');
+    reserva = botao && reservasDaTabela.get(botao.dataset.observacao);
+    if (!reserva) return;
+    dialogo.querySelector('[data-observacao-livro]').textContent = `${reserva.titulo} — ${reserva.usuario_nome}`;
+    form.observacao.value = reserva.observacao ?? '';
+    dialogo.showModal();
+  });
+
+  dialogo.querySelector('[data-fechar-observacao]').addEventListener('click', () => dialogo.close());
+
+  form.addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    const salva = await comFeedback(() => api.salvarObservacao(reserva.id, form.observacao.value), 'Observação salva.');
+    if (!salva) return;
+    dialogo.close();
+    carregarReservas();
+  });
+}
+
 document.addEventListener('click', async (evento) => {
   const alvo = evento.target.closest(
-    '[data-retirar], [data-devolver], [data-cancelar], [data-excluir], [data-add-exemplar], [data-aprovar], [data-recusar]'
+    '[data-retirar], [data-devolver], [data-cancelar], [data-excluir], [data-add-exemplar], [data-aprovar], [data-recusar], [data-renovar], [data-desativar], [data-reativar]'
   );
   if (!alvo) return;
   alvo.disabled = true;
 
-  const { retirar, devolver, cancelar, excluir, addExemplar, aprovar, recusar } = alvo.dataset;
+  const { retirar, devolver, cancelar, excluir, addExemplar, aprovar, recusar, renovar, desativar, reativar, nome } = alvo.dataset;
   let ok = false;
+
+  if (desativar || reativar) {
+    if (desativar && !confirm(`Desativar a conta de ${nome}? O acesso cai na hora e as pré-reservas ainda não retiradas são canceladas.`)) {
+      alvo.disabled = false;
+      return;
+    }
+    ok = desativar
+      ? await comFeedback(() => api.desativarUsuario(desativar), ({ reservas_canceladas: n }) => `Conta desativada. Pré-reservas canceladas: ${n}.`)
+      : await comFeedback(() => api.reativarUsuario(reativar), 'Conta reativada.');
+    alvo.disabled = false;
+    if (ok) {
+      carregarUsuarios();
+      recarregarTudo();
+    }
+    return;
+  }
 
   if (aprovar) ok = await comFeedback(() => api.aprovarDepoimento(aprovar), 'Depoimento aprovado: ele já aparece no site.');
   if (recusar) ok = await comFeedback(() => api.recusarDepoimento(recusar), 'Depoimento recusado.');
@@ -136,6 +190,9 @@ document.addEventListener('click', async (evento) => {
 
   if (retirar) ok = await comFeedback(() => api.marcarRetirada(retirar), 'Retirada registrada.');
   if (devolver) ok = await comFeedback(() => api.marcarDevolvida(devolver), 'Devolução registrada.');
+  if (renovar) {
+    ok = await comFeedback(() => api.renovarEmprestimo(renovar), (r) => `Renovado. Novo prazo: ${formatarData(r.devolver_ate)}.`);
+  }
   if (cancelar) ok = await comFeedback(() => api.cancelarReserva(cancelar), 'Reserva cancelada.');
   if (addExemplar) ok = await comFeedback(() => api.adicionarExemplares(addExemplar, 1), 'Exemplar adicionado.');
   if (excluir) {
@@ -339,7 +396,9 @@ function lerBase64(arquivo) {
 }
 
 async function carregarUsuarios() {
-  const usuarios = await api.usuarios();
+  const [usuarios, turmas] = await Promise.all([api.usuarios(), api.turmas()]);
+  document.querySelector('[data-lista-turmas]').innerHTML = turmas
+    .map((t) => `<option value="${escaparHtml(t.nome)}"></option>`).join('');
   document.querySelector('[data-tabela-usuarios]').innerHTML = usuarios.map((u) => `
     <tr>
       <td><strong>${escaparHtml(u.nome)}</strong></td>
@@ -347,6 +406,8 @@ async function carregarUsuarios() {
       <td>${escaparHtml(u.turma ?? '—')}</td>
       <td><span class="selo selo--${u.papel === 'admin' ? 'retirada' : 'ativa'}">${u.papel}</span></td>
       <td>${u.reservas_ativas}</td>
+      <td><span class="selo selo--${u.ativo ? 'devolvida' : 'cancelada'}">${u.ativo ? 'Ativa' : 'Desativada'}</span></td>
+      <td class="cel-acoes">${botaoSituacao(u)}</td>
     </tr>`).join('');
 
   const form = document.querySelector('[data-form-usuario]');
@@ -362,6 +423,13 @@ async function carregarUsuarios() {
       carregarResumo();
     }
   });
+}
+
+function botaoSituacao(u) {
+  if (u.id === usuario.id) return ''; // a própria conta não pode ser desativada
+  return u.ativo
+    ? `<button class="mini-btn mini-btn--perigo" data-desativar="${u.id}" data-nome="${escaparHtml(u.nome)}">Desativar</button>`
+    : `<button class="mini-btn" data-reativar="${u.id}">Reativar</button>`;
 }
 
 const ROTULOS_DEPOIMENTO = {

@@ -38,19 +38,25 @@ async function desenhar() {
                 <dt>${r.atrasada ? 'Devolução atrasada' : 'Prazo'}</dt>
                 <dd>Devolver até ${formatarData(r.devolver_ate)}</dd>
               </div>` : ''}
+          ${r.status === 'retirada' && r.renovacoes
+            ? `<div><dt>Renovações</dt><dd>${r.renovacoes}</dd></div>` : ''}
         </dl>
       </div>
       ${r.status === 'ativa'
         ? `<button class="btn btn--outline" type="button" data-cancelar="${r.id}">Cancelar</button>` : ''}
+      ${r.pode_renovar
+        ? `<button class="btn btn--lilac" type="button" data-renovar="${r.id}" data-novo-prazo="${escaparHtml(r.novo_prazo)}">Renovar</button>` : ''}
     </article>`).join('');
 }
 
 alvo.addEventListener('click', async (evento) => {
-  const botao = evento.target.closest('[data-cancelar]');
+  const botao = evento.target.closest('[data-cancelar], [data-renovar]');
   if (!botao) return;
+  const { cancelar, renovar, novoPrazo } = botao.dataset;
+  if (renovar && !confirm(`Renovar este empréstimo? O novo prazo de devolução será ${formatarData(novoPrazo)}.`)) return;
   botao.disabled = true;
   try {
-    await api.cancelarReserva(botao.dataset.cancelar);
+    await (renovar ? api.renovarReserva(renovar) : api.cancelarReserva(cancelar));
     await desenhar();
   } catch (erro) {
     alert(erro.message);

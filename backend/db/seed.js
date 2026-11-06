@@ -2,6 +2,7 @@ import { db, transacao } from './index.js';
 import { criarHashSenha } from '../auth.js';
 import { buscaNormalizadaLivro } from '../texto.js';
 import { executadoDiretamente } from '../execucao.js';
+import { buscarOuCriarTurma } from '../repositorio.js';
 
 const MATERIAS = [
   ['literatura', 'Literatura', 'livro.png'],
@@ -93,12 +94,12 @@ export function popular() {
 
     // Senha padrão é pública (está neste arquivo): a conta já nasce obrigada a trocá-la.
     const inserirUsuario = db.prepare(`
-      INSERT INTO usuarios (nome, email, senha_hash, papel, turma, trocar_senha)
+      INSERT INTO usuarios (nome, email, senha_hash, papel, turma_id, trocar_senha)
       VALUES (?, ?, ?, ?, ?, 1)
       ON CONFLICT(email) DO NOTHING
     `);
     for (const [nome, email, senha, papel, turma] of USUARIOS) {
-      inserirUsuario.run(nome, email, criarHashSenha(senha), papel, turma);
+      inserirUsuario.run(nome, email, criarHashSenha(senha), papel, turma ? buscarOuCriarTurma(turma).id : null);
     }
   });
 }
