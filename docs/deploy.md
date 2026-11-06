@@ -19,12 +19,27 @@ veja a seção Docker do [README](../README.md#docker).
 | `DB_PATH` | `/var/lib/biblioteca/biblioteca.db` | Atualizar o código não mexe no banco |
 | `CONFIAR_PROXY` | `1` | Sem isso, todo mundo parece vir do mesmo IP |
 | `CORS_ORIGENS` | As origens do aplicativo web | Opcional. O padrão libera todas |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Do Google Cloud | Ligam o login com o Google. Veja a seção abaixo |
+| `GOOGLE_URL_RETORNO` | `https://SEU-DOMINIO/api/auth/google/retorno` | Igual à cadastrada no Google |
 
 > **`NODE_ENV=production` exige HTTPS.** Em `http://`, o navegador não guarda o cookie e ninguém
 > consegue entrar.
 
 > **`CONFIAR_PROXY=1` exige `HOST=127.0.0.1`.** Se o Node puder ser alcançado sem passar pelo
 > Nginx, qualquer um inventa o `X-Real-IP` e escapa dos limites de tentativa.
+
+## Login com o Google
+
+1. No [Google Cloud Console](https://console.cloud.google.com/apis/credentials), crie um projeto e
+   configure a tela de consentimento, com os escopos `openid` e `email`.
+2. Crie uma credencial **ID do cliente OAuth**, do tipo **Aplicativo da Web**.
+3. Em **URIs de redirecionamento autorizados**, cadastre o valor de `GOOGLE_URL_RETORNO`. Para
+   testar na sua máquina, cadastre também `http://localhost:3000/api/auth/google/retorno`.
+4. Defina `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no servidor. O segredo não vai para o Git.
+
+O Google só confirma o e-mail. Para entrar, a pessoa precisa de uma conta ativa no site com
+exatamente esse e-mail, e ele precisa ser de um domínio de `GOOGLE_DOMINIOS`. O login com o Google
+não cria contas. Quem tem senha provisória continua obrigado a trocá-la no primeiro acesso.
 
 ## Nginx com HTTPS
 

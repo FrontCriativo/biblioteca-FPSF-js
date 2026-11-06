@@ -3,7 +3,10 @@ import {
   usuarioDaSessao, lerCookie, cabecalhoCookieSessao, cookieSessaoExpirado,
   loginBloqueado, segundosDeBloqueioLogin, registrarFalhaLogin, limparFalhasLogin,
   definirSenha, encerrarAcessos, buscarContaPorEmail,
+  COOKIE_GOOGLE, cabecalhoCookieGoogle, cookieGoogleExpirado,
 } from './auth.js';
+import { googleConfigurado, urlDeAutorizacao, dominioPermitido, emailConfirmadoPeloGoogle } from './google.js';
+import { randomBytes } from 'node:crypto';
 import { existsSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { db, transacao } from './db/index.js';
@@ -176,7 +179,23 @@ function gerarSlug(titulo) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-// Cada rota devolve { corpo } ou { corpo, cabecalhos }.
+/**
+ * Fim do login com o Google, que é uma navegação e não uma chamada da página: o erro vai
+ * como código na URL. Com a sessão aberta, a própria login.html leva ao destino.
+ */
+function voltarAoLogin({ destino, erro, cookies = [] }) {
+  const parametros = new URLSearchParams();
+  if (destino) parametros.set('destino', destino);
+  if (erro) parametros.set('erro', erro);
+  const busca = parametros.size ? `?${parametros}` : '';
+  return {
+    status: 302,
+    corpo: null,
+    cabecalhos: { Location: `/login.html${busca}`, 'Set-Cookie': [cookieGoogleExpirado, ...cookies] },
+  };
+}
+
+// Cada rota devolve { corpo } ou { corpo, cabecalhos }. status é opcional, e a rota pode ser async.
 const rotas = {
   'POST /api/login': (req, { corpo }) => {
     const email = normalizarEmail(campoObrigatorio(corpo, 'email'));
@@ -190,6 +209,46 @@ const rotas = {
       },
       cabecalhos: { 'Set-Cookie': cabecalhoCookieSessao(token) },
     };
+  },
+
+  'GET /api/auth/google': (req, { query }) => {
+    // Mesma regra da login.js: só páginas internas.
+    const pedido = query.get('destino') ?? '';
+    const destino = /^[a-z0-9-]+\.html$/.test(pedido) ? pedido : '';
+    if (!googleConfigurado()) return voltarAoLogin({ destino, erro: 'google-indisponivel' });
+    const estado = randomBytes(32).toString('hex');
+    return {
+      status: 302,
+      corpo: null,
+      cabecalhos: {
+        Location: urlDeAutorizacao(estado),
+        'Set-Cookie': cabecalhoCookieGoogle(`${estado}:${destino}`),
+      },
+    };
+  },
+
+  'GET /api/auth/google/retorno': async (req, { query }) => {
+    const [estado, destino] = (lerCookie(req, COOKIE_GOOGLE) ?? '').split(':');
+    // Sem esta conferência, um link pronto poderia entrar na conta de outra pessoa
+    // no navegador da vítima, que passaria a usar o site achando que a conta é a dela.
+    if (!estado || query.get('state') !== estado) return voltarAoLogin({ erro: 'google-falhou' });
+
+    const codigo = query.get('code');
+    if (!codigo) return voltarAoLogin({ destino, erro: 'google-cancelado' });
+
+    let email;
+    try {
+      email = await emailConfirmadoPeloGoogle(codigo);
+    } catch (erro) {
+      console.error('Login com o Google falhou:', erro.message);
+      return voltarAoLogin({ destino, erro: 'google-falhou' });
+    }
+    if (!dominioPermitido(email)) return voltarAoLogin({ destino, erro: 'google-dominio' });
+
+    const usuario = buscarContaPorEmail(email);
+    if (!usuario) return voltarAoLogin({ destino, erro: 'google-sem-conta' });
+    if (!usuario.ativo) return voltarAoLogin({ destino, erro: 'conta-desativada' });
+    return voltarAoLogin({ destino, cookies: [cabecalhoCookieSessao(abrirSessao(usuario.id))] });
   },
 
   'POST /api/logout': (req) => {

@@ -96,7 +96,7 @@ async function atender(req, res) {
     expirarReservasVencidas();
     const limite = url.pathname === '/api/admin/capas' ? LIMITE_CORPO_UPLOAD : LIMITE_CORPO;
     const corpo = req.method === 'GET' || req.method === 'DELETE' ? {} : await lerCorpo(req, limite);
-    const resultado = rota.handler(req, { corpo, params: rota.params, query: url.searchParams });
+    const resultado = await rota.handler(req, { corpo, params: rota.params, query: url.searchParams });
     responderJson(res, resultado.status ?? 200, resultado.corpo, resultado.cabecalhos);
   } catch (erro) {
     const status = erro.status ?? 500;

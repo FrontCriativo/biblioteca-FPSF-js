@@ -8,6 +8,11 @@ services:
       - capas:/app/frontend/assets
       - backups:/app/backup
     restart: unless-stopped
+    environment:
+      - GOOGLE_CLIENT_ID
+      - GOOGLE_CLIENT_SECRET
+      - GOOGLE_URL_RETORNO
+      - GOOGLE_DOMINIOS
 
 volumes:
   dados:

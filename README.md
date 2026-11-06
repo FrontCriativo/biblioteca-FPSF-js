@@ -69,6 +69,8 @@ Usada pelas páginas em `frontend/js/api.js`. Autenticação por cookie de sess�
 | Método | Rota | Acesso | O que faz |
 |---|---|---|---|
 | POST | `/api/login` | Público | Abre a sessão |
+| GET | `/api/auth/google` | Público | Leva ao login com o Google; aceita `?destino=` |
+| GET | `/api/auth/google/retorno` | Público | Volta do Google: abre a sessão e redireciona para o login |
 | POST | `/api/logout` | Público | Encerra a sessão |
 | GET | `/api/eu` | Público | Usuário da sessão, ou `null` |
 | POST | `/api/eu/senha` | Logado | Troca a própria senha e derruba os outros acessos |
@@ -130,6 +132,10 @@ back-ends.
 | `CORS_ORIGENS` | `*` | Origens liberadas na v1, separadas por vírgula |
 | `V1_LIMITE_POR_MINUTO` | `60` | Requisições por minuto, por IP, na v1 |
 | `CONFIAR_PROXY` | | Com `1`, o IP do cliente vem do cabeçalho `X-Real-IP`. Só use atrás de proxy reverso (ver [docs/deploy.md](docs/deploy.md)) |
+| `GOOGLE_CLIENT_ID` | | Client ID do login com o Google. Sem ele e o segredo, o botão avisa que o login não está disponível (ver [docs/deploy.md](docs/deploy.md#login-com-o-google)) |
+| `GOOGLE_CLIENT_SECRET` | | Segredo do mesmo cliente |
+| `GOOGLE_URL_RETORNO` | `http://localhost:PORT/api/auth/google/retorno` | URL de retorno, igual à cadastrada no Google |
+| `GOOGLE_DOMINIOS` | `al.educacao.sp.gov.br,aluno.educacao.sp.gov.br` | Domínios de e-mail aceitos no login com o Google, separados por vírgula |
 
 ## Banco de dados
 

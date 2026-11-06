@@ -144,6 +144,17 @@ export function cabecalhoCookieSessao(token) {
 
 export const cookieSessaoExpirado = `sessao=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${FLAG_SECURE}`;
 
+// Liga a volta do Google ao navegador que pediu o login. Lax, e não Strict como o da sessão:
+// a volta é uma navegação vinda de outro site, e com Strict o cookie não chegaria.
+export const COOKIE_GOOGLE = 'login_google';
+const ATRIBUTOS_COOKIE_GOOGLE = `HttpOnly; SameSite=Lax; Path=/api/auth/google${FLAG_SECURE}`;
+
+export function cabecalhoCookieGoogle(valor) {
+  return `${COOKIE_GOOGLE}=${encodeURIComponent(valor)}; ${ATRIBUTOS_COOKIE_GOOGLE}; Max-Age=600`;
+}
+
+export const cookieGoogleExpirado = `${COOKIE_GOOGLE}=; ${ATRIBUTOS_COOKIE_GOOGLE}; Max-Age=0`;
+
 // Limite de tentativas de login erradas, por e-mail e por IP, numa janela de 15 minutos.
 const JANELA_TENTATIVAS_MS = 15 * 60 * 1000;
 const falhasPorEmail = criarLimitador({ janelaMs: JANELA_TENTATIVAS_MS, maximo: 5 });

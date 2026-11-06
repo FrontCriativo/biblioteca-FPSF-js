@@ -73,6 +73,7 @@ export const portaDoServidor = () => servidor.address().port;
 export async function pedir(metodo, caminho, { corpo, cookie, token, cabecalhos = {} } = {}) {
   const resposta = await fetch(base + caminho, {
     method: metodo,
+    redirect: 'manual',
     headers: {
       ...(corpo !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...(cookie ? { Cookie: cookie } : {}),
