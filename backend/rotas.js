@@ -8,7 +8,9 @@ import { existsSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { db, transacao } from './db/index.js';
 import * as repo from './repositorio.js';
-import { normalizarTexto } from './texto.js';
+import { normalizarTexto, normalizarEmail } from './texto.js';
+import { ErroHttp, ErroValidacao, ipDe } from './http.js';
+import { criarLimitador } from './limite.js';
 
 const PASTA_ASSETS = fileURLToPath(new URL('../frontend/assets/', import.meta.url));
 
@@ -18,13 +20,6 @@ const FORMATOS_CAPA = [
   { ext: '.png', confere: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
   { ext: '.webp', confere: (b) => b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP' },
 ];
-
-class ErroHttp extends Error {
-  constructor(status, mensagem) {
-    super(mensagem);
-    this.status = status;
-  }
-}
 
 /** permitirTrocaPendente: rotas que a conta com senha provisória ainda pode usar. */
 function exigirLogin(req, { permitirTrocaPendente = false } = {}) {
@@ -42,79 +37,101 @@ function exigirAdmin(req) {
   return usuario;
 }
 
-function campoObrigatorio(corpo, campo) {
+export function campoObrigatorio(corpo, campo) {
   const valor = corpo?.[campo];
   if (typeof valor !== 'string' || !valor.trim()) {
-    throw new ErroHttp(400, `O campo "${campo}" é obrigatório.`);
+    throw new ErroValidacao(`O campo "${campo}" é obrigatório.`);
   }
   return valor.trim();
 }
 
-function textoLimitado(corpo, campo, maximo) {
+export function textoLimitado(corpo, campo, maximo) {
   const valor = campoObrigatorio(corpo, campo);
   if (valor.length > maximo) {
-    throw new ErroHttp(400, `O campo "${campo}" aceita no máximo ${maximo} caracteres.`);
+    throw new ErroValidacao(`O campo "${campo}" aceita no máximo ${maximo} caracteres.`);
   }
   return valor;
 }
 
+/** Texto que pode faltar: ausente ou em branco vira null. */
+export function textoOpcional(corpo, campo, maximo) {
+  const valor = corpo?.[campo];
+  if (valor === undefined || valor === null) return null;
+  if (typeof valor !== 'string') throw new ErroValidacao(`O campo "${campo}" deve ser um texto.`);
+  return valor.trim() ? textoLimitado(corpo, campo, maximo) : null;
+}
+
+const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Devolve o e-mail já normalizado, que é a forma gravada no banco. */
+export function emailValido(corpo, campo, maximo) {
+  const email = normalizarEmail(textoLimitado(corpo, campo, maximo));
+  if (!FORMATO_EMAIL.test(email)) {
+    throw new ErroValidacao(`O campo "${campo}" deve ser um e-mail válido.`);
+  }
+  return email;
+}
+
 const TAMANHO_MINIMO_SENHA = 8;
 
-function senhaNova(corpo, campo) {
+export function senhaNova(corpo, campo) {
   const senha = campoObrigatorio(corpo, campo);
   if (senha.length < TAMANHO_MINIMO_SENHA) {
-    throw new ErroHttp(400, `A senha precisa ter ao menos ${TAMANHO_MINIMO_SENHA} caracteres.`);
+    throw new ErroValidacao(`A senha precisa ter ao menos ${TAMANHO_MINIMO_SENHA} caracteres.`);
   }
   return senha;
 }
 
-// Endereço da conexão, e não X-Forwarded-For: esse cabeçalho o próprio cliente pode inventar.
-const ipDe = (req) => req.socket.remoteAddress ?? 'desconhecido';
-
-// Envios de depoimento por IP, em memória (mesma ideia do limite de login em auth.js).
-// O limite é folgado porque a escola inteira sai pelo mesmo IP.
-const MAX_DEPOIMENTOS_IP = 20;
-const JANELA_DEPOIMENTOS_MS = 60 * 60 * 1000;
-const enviosDepoimento = new Map(); // ip → { contagem, inicio }
-
-function registrarEnvioDepoimento(ip) {
-  const agora = Date.now();
-  const registro = enviosDepoimento.get(ip);
-  if (!registro || agora - registro.inicio >= JANELA_DEPOIMENTOS_MS) {
-    enviosDepoimento.set(ip, { contagem: 1, inicio: agora });
-    return;
-  }
-  if (registro.contagem >= MAX_DEPOIMENTOS_IP) {
-    throw new ErroHttp(429, 'Muitos depoimentos enviados daqui. Tente de novo mais tarde.');
-  }
-  registro.contagem++;
-}
-
-/** Tira do Map os registros cuja janela já passou, para ele não crescer sem limite. */
-export function apagarEnviosDepoimentoVencidos() {
-  const agora = Date.now();
-  for (const [ip, registro] of enviosDepoimento) {
-    if (agora - registro.inicio >= JANELA_DEPOIMENTOS_MS) enviosDepoimento.delete(ip);
-  }
-}
-
-/** Só para os testes: cada caso começa sem envios acumulados. */
-export function zerarEnviosDepoimento() {
-  enviosDepoimento.clear();
-}
+// Envios de depoimento por IP. O limite é folgado porque a escola inteira sai pelo mesmo IP.
+const enviosDepoimento = criarLimitador({ janelaMs: 60 * 60 * 1000, maximo: 20 });
 
 const STATUS_DEPOIMENTO = ['pendente', 'aprovado', 'recusado'];
 
-function inteiroPositivo(valor, campo, padrao = null) {
+export function inteiroPositivo(valor, campo, padrao = null) {
   if (valor === undefined || valor === '') {
     if (padrao !== null) return padrao;
-    throw new ErroHttp(400, `O campo "${campo}" é obrigatório.`);
+    throw new ErroValidacao(`O campo "${campo}" é obrigatório.`);
   }
   const n = Number(valor);
   if (!Number.isInteger(n) || n < 1) {
-    throw new ErroHttp(400, `O campo "${campo}" deve ser um número inteiro positivo.`);
+    throw new ErroValidacao(`O campo "${campo}" deve ser um número inteiro positivo.`);
   }
   return n;
+}
+
+function inteiroAte(valor, campo, maximo, padrao) {
+  const n = inteiroPositivo(valor, campo, padrao);
+  if (n > maximo) throw new ErroValidacao(`O campo "${campo}" aceita no máximo ${maximo}.`);
+  return n;
+}
+
+// Só o nome: a capa vira parte de um caminho em assets/ e não pode apontar para fora de lá.
+const FORMATO_NOME_ARQUIVO = /^[\w.\-]+$/;
+
+function nomeDeArquivo(corpo, campo) {
+  const nome = textoOpcional(corpo, campo, 255);
+  if (nome !== null && (!FORMATO_NOME_ARQUIVO.test(nome) || /^\.+$/.test(nome))) {
+    throw new ErroValidacao(`O campo "${campo}" deve ser só o nome de um arquivo.`);
+  }
+  return nome;
+}
+
+/** Campos comuns à criação e à edição de um livro. */
+function dadosDoLivro(corpo) {
+  const materia_slug = campoObrigatorio(corpo, 'materia_slug');
+  if (!repo.materiaExiste(materia_slug)) {
+    throw new ErroValidacao('A matéria informada não existe.');
+  }
+  const semPaginas = corpo.paginas === undefined || corpo.paginas === null || corpo.paginas === '';
+  return {
+    titulo: textoLimitado(corpo, 'titulo', 255),
+    autor: textoLimitado(corpo, 'autor', 255),
+    materia_slug,
+    capa: nomeDeArquivo(corpo, 'capa'),
+    sinopse: textoOpcional(corpo, 'sinopse', 5000),
+    paginas: semPaginas ? null : inteiroAte(corpo.paginas, 'paginas', 100_000),
+    idioma: textoOpcional(corpo, 'idioma', 60) ?? 'Português',
+  };
 }
 
 function gerarSlug(titulo) {
@@ -125,7 +142,7 @@ function gerarSlug(titulo) {
 // Cada rota devolve { corpo } ou { corpo, cabecalhos }.
 const rotas = {
   'POST /api/login': (req, { corpo }) => {
-    const email = campoObrigatorio(corpo, 'email');
+    const email = normalizarEmail(campoObrigatorio(corpo, 'email'));
     const senha = campoObrigatorio(corpo, 'senha');
     const ip = ipDe(req);
     if (loginBloqueado(email, ip)) {
@@ -192,17 +209,11 @@ const rotas = {
 
   'POST /api/livros': (req, { corpo }) => {
     exigirAdmin(req);
-    const titulo = campoObrigatorio(corpo, 'titulo');
+    const livro = dadosDoLivro(corpo);
     const dados = {
-      slug: gerarSlug(titulo),
-      titulo,
-      autor: campoObrigatorio(corpo, 'autor'),
-      materia_slug: campoObrigatorio(corpo, 'materia_slug'),
-      capa: corpo.capa?.trim() || null,
-      sinopse: corpo.sinopse?.trim() || null,
-      paginas: corpo.paginas ? inteiroPositivo(corpo.paginas, 'paginas') : null,
-      idioma: corpo.idioma?.trim() || 'Português',
-      exemplares: inteiroPositivo(corpo.exemplares, 'exemplares', 1),
+      ...livro,
+      slug: gerarSlug(livro.titulo),
+      exemplares: inteiroAte(corpo.exemplares, 'exemplares', 200, 1),
     };
     if (repo.buscarLivroPorSlug(dados.slug)) {
       throw new ErroHttp(409, 'Já existe um livro com esse título.');
@@ -212,17 +223,10 @@ const rotas = {
 
   'PUT /api/livros/:id': (req, { corpo, params }) => {
     exigirAdmin(req);
-    return {
-      corpo: repo.atualizarLivro(inteiroPositivo(params.id, 'id'), {
-        titulo: campoObrigatorio(corpo, 'titulo'),
-        autor: campoObrigatorio(corpo, 'autor'),
-        materia_slug: campoObrigatorio(corpo, 'materia_slug'),
-        capa: corpo.capa?.trim() || null,
-        sinopse: corpo.sinopse?.trim() || null,
-        paginas: corpo.paginas ? inteiroPositivo(corpo.paginas, 'paginas') : null,
-        idioma: corpo.idioma?.trim() || 'Português',
-      }),
-    };
+    const id = inteiroPositivo(params.id, 'id');
+    const dados = dadosDoLivro(corpo);
+    if (!repo.livroExiste(id)) throw new ErroHttp(404, 'Livro não encontrado.');
+    return { corpo: repo.atualizarLivro(id, dados) };
   },
 
   'DELETE /api/livros/:id': (req, { params }) => {
@@ -233,8 +237,10 @@ const rotas = {
 
   'POST /api/livros/:id/exemplares': (req, { corpo, params }) => {
     exigirAdmin(req);
-    const quantidade = inteiroPositivo(corpo.quantidade, 'quantidade', 1);
-    repo.adicionarExemplares(inteiroPositivo(params.id, 'id'), quantidade);
+    const id = inteiroPositivo(params.id, 'id');
+    const quantidade = inteiroAte(corpo.quantidade, 'quantidade', 200, 1);
+    if (!repo.livroExiste(id)) throw new ErroHttp(404, 'Livro não encontrado.');
+    repo.adicionarExemplares(id, quantidade);
     return { corpo: { ok: true, adicionados: quantidade } };
   },
 
@@ -300,9 +306,10 @@ const rotas = {
 
   'POST /api/admin/usuarios': (req, { corpo }) => {
     exigirAdmin(req);
-    const nome = campoObrigatorio(corpo, 'nome');
-    const email = campoObrigatorio(corpo, 'email');
+    const nome = textoLimitado(corpo, 'nome', 255);
+    const email = emailValido(corpo, 'email', 255);
     const senha = senhaNova(corpo, 'senha');
+    const turma = textoOpcional(corpo, 'turma', 40);
     const papel = corpo.papel === 'admin' ? 'admin' : 'aluno';
     if (db.prepare('SELECT 1 FROM usuarios WHERE email = ?').get(email)) {
       throw new ErroHttp(409, 'Já existe um usuário com esse e-mail.');
@@ -311,11 +318,8 @@ const rotas = {
     const { lastInsertRowid } = db.prepare(`
       INSERT INTO usuarios (nome, email, senha_hash, papel, turma, trocar_senha)
       VALUES (?, ?, ?, ?, ?, 1)
-    `).run(nome, email, criarHashSenha(senha), papel, corpo.turma?.trim() || null);
-    return {
-      corpo: { id: Number(lastInsertRowid), nome, email, papel, turma: corpo.turma?.trim() || null },
-      status: 201,
-    };
+    `).run(nome, email, criarHashSenha(senha), papel, turma);
+    return { corpo: { id: Number(lastInsertRowid), nome, email, papel, turma }, status: 201 };
   },
 
   'POST /api/admin/usuarios/:id/senha': (req, { corpo, params }) => {
@@ -348,7 +352,9 @@ const rotas = {
     if (!Number.isInteger(dados.nota) || dados.nota < 1 || dados.nota > 5) {
       throw new ErroHttp(400, 'A nota deve ser um número de 1 a 5.');
     }
-    registrarEnvioDepoimento(ipDe(req));
+    if (!enviosDepoimento.consumir(ipDe(req))) {
+      throw new ErroHttp(429, 'Muitos depoimentos enviados daqui. Tente de novo mais tarde.');
+    }
     // Sempre entra como pendente: só aparece no site depois da moderação.
     return { corpo: repo.criarDepoimento(dados), status: 201 };
   },
@@ -370,32 +376,45 @@ const rotas = {
   },
 };
 
-const tabela = Object.entries(rotas).map(([chave, handler]) => {
-  const [metodo, molde] = chave.split(' ');
-  const nomes = [];
-  const padrao = molde.replace(/:([a-zA-Z]+)/g, (_, nome) => {
-    nomes.push(nome);
-    return '([^/]+)';
+/**
+ * Monta um roteador a partir de { 'MÉTODO /caminho/:param': handler }.
+ * resolver() devolve { handler, params } ou null; metodosDe() lista os métodos que um
+ * caminho aceita, para quem responde 405 em vez de 404.
+ */
+export function criarRoteador(tabelaDeRotas) {
+  const tabela = Object.entries(tabelaDeRotas).map(([chave, handler]) => {
+    const [metodo, molde] = chave.split(' ');
+    const nomes = [];
+    const padrao = molde.replace(/:([a-zA-Z]+)/g, (_, nome) => {
+      nomes.push(nome);
+      return '([^/]+)';
+    });
+    return { metodo, regex: new RegExp(`^${padrao}$`), nomes, handler };
   });
-  return { metodo, regex: new RegExp(`^${padrao}$`), nomes, handler };
-});
 
-export function resolverRota(metodo, caminho) {
-  for (const rota of tabela) {
-    if (rota.metodo !== metodo) continue;
-    const achado = caminho.match(rota.regex);
-    if (!achado) continue;
-    let params;
-    try {
-      params = Object.fromEntries(
-        rota.nomes.map((nome, i) => [nome, decodeURIComponent(achado[i + 1])])
-      );
-    } catch {
-      throw new ErroHttp(400, 'Requisição inválida.'); // escape malformado, ex.: /api/livros/%E0%A4%A
-    }
-    return { handler: rota.handler, params };
-  }
-  return null;
+  return {
+    resolver(metodo, caminho) {
+      for (const rota of tabela) {
+        if (rota.metodo !== metodo) continue;
+        const achado = caminho.match(rota.regex);
+        if (!achado) continue;
+        let params;
+        try {
+          params = Object.fromEntries(
+            rota.nomes.map((nome, i) => [nome, decodeURIComponent(achado[i + 1])])
+          );
+        } catch {
+          throw new ErroHttp(400, 'Requisição inválida.'); // escape malformado, ex.: /api/livros/%E0%A4%A
+        }
+        return { handler: rota.handler, params };
+      }
+      return null;
+    },
+
+    metodosDe: (caminho) => tabela.filter((rota) => rota.regex.test(caminho)).map((rota) => rota.metodo),
+  };
 }
 
-export { ErroHttp };
+const roteador = criarRoteador(rotas);
+
+export const resolverRota = roteador.resolver;

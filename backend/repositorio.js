@@ -9,6 +9,9 @@ export const LIMITE_RESERVAS_ALUNO = 3;
 // Livro retirado cujo prazo de devolução já passou.
 const ATRASADA = "r.status = 'retirada' AND r.devolver_ate < datetime('now')";
 
+// Extended result code do SQLite para violação de índice único.
+const SQLITE_CONSTRAINT_UNIQUE = 2067;
+
 const COLUNAS_LIVRO = `
   l.id, l.slug, l.titulo, l.autor, l.materia_slug, l.capa,
   l.sinopse, l.paginas, l.idioma,
@@ -29,6 +32,14 @@ export function listarMaterias() {
       FROM materias m
      ORDER BY m.nome
   `).all();
+}
+
+export function materiaExiste(slug) {
+  return Boolean(db.prepare('SELECT 1 FROM materias WHERE slug = ?').get(slug));
+}
+
+export function livroExiste(id) {
+  return Boolean(db.prepare('SELECT 1 FROM livros WHERE id = ?').get(id));
 }
 
 export function listarLivros({ materia, busca } = {}) {
@@ -153,11 +164,20 @@ export function criarReserva(livroId, usuarioId, { limite = LIMITE_RESERVAS_ALUN
       throw Object.assign(new Error('Não há exemplares disponíveis no momento.'), { status: 409 });
     }
 
-    const { lastInsertRowid } = db.prepare(`
-      INSERT INTO reservas (exemplar_id, usuario_id, expira_em)
-      VALUES (?, ?, datetime('now', '+${DIAS_PARA_RETIRAR} days'))
-    `).run(livre.id, usuarioId);
-    return buscarReserva(Number(lastInsertRowid));
+    try {
+      const { lastInsertRowid } = db.prepare(`
+        INSERT INTO reservas (exemplar_id, usuario_id, expira_em)
+        VALUES (?, ?, datetime('now', '+${DIAS_PARA_RETIRAR} days'))
+      `).run(livre.id, usuarioId);
+      return buscarReserva(Number(lastInsertRowid));
+    } catch (erro) {
+      // Outro processo pegou o exemplar entre a consulta acima e este INSERT:
+      // é o índice idx_reserva_exemplar_ativa fazendo o trabalho dele, e não um defeito.
+      if (erro.errcode === SQLITE_CONSTRAINT_UNIQUE) {
+        throw Object.assign(new Error('Este exemplar acabou de ser reservado. Tente novamente.'), { status: 409 });
+      }
+      throw erro;
+    }
   });
 }
 

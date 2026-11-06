@@ -11,3 +11,8 @@ export function normalizarTexto(texto) {
 export function buscaNormalizadaLivro(titulo, autor) {
   return normalizarTexto(`${titulo} ${autor}`);
 }
+
+/** Forma canônica do e-mail: é como ele é gravado e consultado. */
+export function normalizarEmail(email) {
+  return String(email ?? '').trim().toLowerCase();
+}

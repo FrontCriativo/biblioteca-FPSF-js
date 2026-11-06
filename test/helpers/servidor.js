@@ -8,8 +8,7 @@ process.env.DB_PATH = ':memory:';
 const { criarServidor } = await import('../../backend/server.js');
 const { db, transacao } = await import('../../backend/db/index.js');
 const { popular } = await import('../../backend/db/seed.js');
-const { zerarFalhasLogin } = await import('../../backend/auth.js');
-const { zerarEnviosDepoimento } = await import('../../backend/rotas.js');
+const { zerarLimites } = await import('../../backend/limite.js');
 
 export { db };
 
@@ -45,11 +44,6 @@ function restaurarFoto() {
     }
   });
   db.exec('PRAGMA foreign_keys = ON');
-}
-
-function zerarLimites() {
-  zerarFalhasLogin();
-  zerarEnviosDepoimento();
 }
 
 /** Chame no topo do arquivo de teste: sobe o servidor e isola um caso do outro. */

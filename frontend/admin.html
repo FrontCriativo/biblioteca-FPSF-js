@@ -94,11 +94,11 @@
       <div class="field-row">
         <div class="field">
           <label for="novo-titulo">Título</label>
-          <input id="novo-titulo" name="titulo" required>
+          <input id="novo-titulo" name="titulo" maxlength="255" required>
         </div>
         <div class="field">
           <label for="novo-autor">Autor</label>
-          <input id="novo-autor" name="autor" required>
+          <input id="novo-autor" name="autor" maxlength="255" required>
         </div>
       </div>
       <div class="field-row">
@@ -119,17 +119,17 @@
       <div class="field-row">
         <div class="field">
           <label for="novo-paginas">Páginas</label>
-          <input id="novo-paginas" name="paginas" type="number" min="1">
+          <input id="novo-paginas" name="paginas" type="number" min="1" max="100000">
         </div>
         <!-- Só na criação: na edição, exemplares entram pelo botão "+ exemplar" da tabela. -->
         <div class="field" data-campo-exemplares>
           <label for="novo-exemplares">Quantos exemplares</label>
-          <input id="novo-exemplares" name="exemplares" type="number" min="1" value="1" required>
+          <input id="novo-exemplares" name="exemplares" type="number" min="1" max="200" value="1" required>
         </div>
       </div>
       <div class="field">
         <label for="novo-sinopse">Sinopse</label>
-        <textarea id="novo-sinopse" name="sinopse" rows="3"></textarea>
+        <textarea id="novo-sinopse" name="sinopse" rows="3" maxlength="5000"></textarea>
       </div>
       <div class="admin-form__acoes">
         <button class="btn btn--lilac" type="submit">Adicionar ao acervo</button>
@@ -155,11 +155,11 @@
       <div class="field-row">
         <div class="field">
           <label for="u-nome">Nome</label>
-          <input id="u-nome" name="nome" required>
+          <input id="u-nome" name="nome" maxlength="255" required>
         </div>
         <div class="field">
           <label for="u-email">E-mail</label>
-          <input id="u-email" name="email" type="email" required>
+          <input id="u-email" name="email" type="email" maxlength="255" required>
         </div>
       </div>
       <div class="field-row">
@@ -169,7 +169,7 @@
         </div>
         <div class="field">
           <label for="u-turma">Turma</label>
-          <input id="u-turma" name="turma" placeholder="ex.: 8º ano B">
+          <input id="u-turma" name="turma" maxlength="40" placeholder="ex.: 8º ano B">
         </div>
       </div>
       <div class="field">

@@ -2,14 +2,15 @@ import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolverRota, ErroHttp, apagarEnviosDepoimentoVencidos } from './rotas.js';
+import { resolverRota } from './rotas.js';
+import { responderJson, lerCorpo, LIMITE_CORPO } from './http.js';
+import { faxinarLimites } from './limite.js';
 import { expirarReservasVencidas } from './repositorio.js';
-import { apagarSessoesVencidas, apagarFalhasLoginVencidas } from './auth.js';
+import { apagarSessoesVencidas } from './auth.js';
 import { executadoDiretamente } from './execucao.js';
 
 const PORTA = Number(process.env.PORT) || 3000;
 const RAIZ_FRONT = fileURLToPath(new URL('../frontend/', import.meta.url));
-const LIMITE_CORPO = 1_000_000;
 // A capa chega em base64 (~33% maior que o arquivo): cabe uma imagem de até ~6 MB.
 const LIMITE_CORPO_UPLOAD = 8_000_000;
 
@@ -25,27 +26,6 @@ const TIPOS = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
 };
-
-function responderJson(res, status, dados, cabecalhos = {}) {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', ...cabecalhos });
-  res.end(JSON.stringify(dados));
-}
-
-async function lerCorpo(req, limite = LIMITE_CORPO) {
-  const partes = [];
-  let tamanho = 0;
-  for await (const pedaco of req) {
-    tamanho += pedaco.length;
-    if (tamanho > limite) throw new ErroHttp(413, 'Corpo da requisição grande demais.');
-    partes.push(pedaco);
-  }
-  if (!partes.length) return {};
-  try {
-    return JSON.parse(Buffer.concat(partes).toString('utf8'));
-  } catch {
-    throw new ErroHttp(400, 'JSON inválido.');
-  }
-}
 
 async function servirArquivo(res, caminhoUrl) {
   let relativo;
@@ -103,7 +83,7 @@ async function atender(req, res) {
     if (status === 500) console.error('Erro interno:', erro);
     responderJson(res, status, {
       erro: status === 500 ? 'Erro interno do servidor.' : erro.message,
-    });
+    }, erro.cabecalhos);
   }
 }
 
@@ -125,8 +105,7 @@ export function criarServidor() {
 function limparVencidos() {
   try {
     const sessoes = apagarSessoesVencidas();
-    apagarFalhasLoginVencidas();
-    apagarEnviosDepoimentoVencidos();
+    faxinarLimites();
     if (sessoes) console.log(`  ${sessoes} sessão(ões) vencida(s) apagada(s).`);
   } catch (erro) {
     console.error('Erro ao apagar sessões vencidas:', erro);

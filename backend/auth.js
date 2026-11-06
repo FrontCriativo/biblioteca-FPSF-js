@@ -1,5 +1,7 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { db } from './db/index.js';
+import { criarLimitador } from './limite.js';
+import { normalizarEmail } from './texto.js';
 
 const DURACAO_SESSAO_DIAS = 7;
 
@@ -83,54 +85,32 @@ export function cabecalhoCookieSessao(token) {
 export const cookieSessaoExpirado = `sessao=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${FLAG_SECURE}`;
 
 // Limite de tentativas de login erradas, por e-mail e por IP, numa janela de 15 minutos.
-// Fica em memória: reiniciar o servidor zera os contadores.
-const MAX_TENTATIVAS_LOGIN = 5;
+const JANELA_TENTATIVAS_MS = 15 * 60 * 1000;
+const falhasPorEmail = criarLimitador({ janelaMs: JANELA_TENTATIVAS_MS, maximo: 5 });
 // Os computadores da escola saem todos pelo mesmo IP: com o limite do e-mail,
 // um aluno errando a senha travava a escola inteira. O do IP só pega ataque em massa.
-const MAX_TENTATIVAS_IP = 50;
-const JANELA_TENTATIVAS_MS = 15 * 60 * 1000;
-const falhasLogin = new Map(); // chave → { contagem, inicio }
-
-const chavesLogin = (email, ip) => [`email:${email.toLowerCase()}`, `ip:${ip}`];
-
-function falhasRecentes(chave, agora = Date.now()) {
-  const registro = falhasLogin.get(chave);
-  if (!registro) return 0;
-  if (agora - registro.inicio >= JANELA_TENTATIVAS_MS) {
-    falhasLogin.delete(chave);
-    return 0;
-  }
-  return registro.contagem;
-}
+const falhasPorIp = criarLimitador({ janelaMs: JANELA_TENTATIVAS_MS, maximo: 50 });
 
 /** true se o e-mail ou o IP já errou a senha o máximo de vezes na janela atual. */
 export function loginBloqueado(email, ip) {
-  const [chaveEmail, chaveIp] = chavesLogin(email, ip);
-  return falhasRecentes(chaveEmail) >= MAX_TENTATIVAS_LOGIN
-    || falhasRecentes(chaveIp) >= MAX_TENTATIVAS_IP;
+  return falhasPorEmail.esgotado(normalizarEmail(email)) || falhasPorIp.esgotado(ip);
+}
+
+/** Quanto falta para o bloqueio de loginBloqueado() acabar (cabeçalho Retry-After). */
+export function segundosDeBloqueioLogin(email, ip) {
+  const chave = normalizarEmail(email);
+  return Math.max(
+    falhasPorEmail.esgotado(chave) ? falhasPorEmail.segundosRestantes(chave) : 0,
+    falhasPorIp.esgotado(ip) ? falhasPorIp.segundosRestantes(ip) : 0,
+  );
 }
 
 export function registrarFalhaLogin(email, ip) {
-  const agora = Date.now();
-  for (const chave of chavesLogin(email, ip)) {
-    const contagem = falhasRecentes(chave, agora);
-    if (contagem === 0) falhasLogin.set(chave, { contagem: 1, inicio: agora });
-    else falhasLogin.get(chave).contagem = contagem + 1;
-  }
+  falhasPorEmail.registrar(normalizarEmail(email));
+  falhasPorIp.registrar(ip);
 }
 
 /** Login certo zera o contador daquele e-mail (o do IP continua valendo). */
 export function limparFalhasLogin(email) {
-  falhasLogin.delete(`email:${email.toLowerCase()}`);
-}
-
-/** Só para os testes: cada caso começa sem tentativas acumuladas. */
-export function zerarFalhasLogin() {
-  falhasLogin.clear();
-}
-
-/** Tira do Map os registros cuja janela já passou, para ele não crescer sem limite. */
-export function apagarFalhasLoginVencidas() {
-  const agora = Date.now();
-  for (const chave of falhasLogin.keys()) falhasRecentes(chave, agora);
+  falhasPorEmail.limpar(normalizarEmail(email));
 }
