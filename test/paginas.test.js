@@ -78,7 +78,7 @@ describe('README e docs/', () => {
     for (const script of Object.keys(JSON.parse(ler('package.json')).scripts)) {
       assert.ok(readme.includes(`npm ${script === 'start' || script === 'test' ? '' : 'run '}${script}`), script);
     }
-    const codigo = ['backend/server.js', 'backend/http.js', 'backend/auth.js', 'backend/api-v1.js', 'backend/db/index.js']
+    const codigo = ['backend/server.js', 'backend/http.js', 'backend/auth.js', 'backend/api-v1.js', 'backend/db/caminho.js']
       .map(ler).join('\n');
     const variaveis = new Set([...codigo.matchAll(/process\.env\.([A-Z_0-9]+)/g)].map((m) => m[1]));
     assert.ok(variaveis.size >= 7);

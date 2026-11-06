@@ -1,0 +1,2 @@
+# O entrypoint roda no Linux do contêiner: com CRLF, o shell não o executa.
+*.sh text eol=lf

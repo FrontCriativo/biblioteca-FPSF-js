@@ -26,6 +26,8 @@ npm start      # sobe o site em http://localhost:3000
 | `npm run dev` | Sobe o servidor e reinicia a cada alteração |
 | `npm run seed` | Insere os dados de exemplo. Rodar de novo não duplica nada |
 | `npm test` | Roda os testes, num banco em memória |
+| `npm run expirar` | Cancela as pré-reservas vencidas e informa quantas |
+| `npm run backup` | Faz uma cópia consistente do banco em `backup/`, com o site no ar |
 
 ### Contas de exemplo
 
@@ -52,9 +54,11 @@ backend/
   limite.js        limites de uso em memória
   texto.js         normalização de texto
   db/              schema.sql, migrações (index.js) e seed.js
+  scripts/         tarefas de manutenção (expirar e backup)
 frontend/          páginas, css/, js/ e assets/ (capas e ícones)
 test/              testes com node:test
 docs/              guias da API, do banco e de publicação
+docker/            script de início do contêiner
 ```
 
 ## API do site
@@ -150,6 +154,69 @@ quando o servidor sobe.
 - Não copie só o `biblioteca.db` com o site no ar: os dados recentes podem estar no `-wal`.
 - Não edite migração que já rodou: ela não roda de novo, e o banco fica diferente do código.
 - Não publique o banco nem os backups: eles têm e-mails e hashes de senha.
+
+## Backup
+
+`npm run backup` grava `backup/biblioteca-AAAA-MM-DD-HHMM.sqlite`, sem sobrescrever nenhum arquivo.
+A cópia é consistente mesmo com o site no ar, e o banco não é migrado. Faça um antes de atualizar o
+código. A pasta `backup/` fica fora do Git, porque os backups têm e-mails e hashes de senha.
+
+O backup cobre só o banco. As capas enviadas pelo painel ficam em `frontend/assets/`.
+
+### Restaurar um backup
+
+Com o servidor parado, tire o banco atual do lugar em vez de apagá-lo, inclusive os arquivos
+`-wal` e `-shm`, e copie o backup para o lugar dele:
+
+```bash
+mkdir -p backup/substituido
+mv backend/db/biblioteca.db* backup/substituido/
+cp backup/biblioteca-2026-11-06-0200.sqlite backend/db/biblioteca.db
+npm start
+```
+
+Se o backup for de uma versão anterior, as migrações rodam ao subir. Se o banco estiver em outro
+lugar, troque o caminho pelo de `DB_PATH`.
+
+### Voltar aos dados de exemplo
+
+O seed não apaga nada: em cima de um banco existente, ele só insere o que falta. Para recomeçar,
+mova o banco para `backup/` e rode o seed, com o servidor parado:
+
+```bash
+mkdir -p backup/substituido
+mv backend/db/biblioteca.db* backup/substituido/
+npm run seed
+```
+
+As contas voltam às senhas de exemplo, com a troca obrigatória no primeiro acesso.
+
+## Docker
+
+```bash
+docker compose up -d --build
+```
+
+O site sobe em `http://localhost:3000`, com usuário sem privilégios. Na primeira subida, se o
+banco não existir, o seed roda sozinho.
+
+| Volume | Pasta no contêiner | O que guarda |
+|---|---|---|
+| `dados` | `/dados` | O banco |
+| `capas` | `/app/frontend/assets` | Capas enviadas e imagens do site |
+| `backups` | `/app/backup` | Saída do `npm run backup` |
+
+```bash
+docker compose exec biblioteca npm run backup    # backup
+docker compose exec biblioteca npm run expirar   # cancela as pré-reservas vencidas
+docker compose logs -f                           # logs
+```
+
+- `docker compose down` mantém os volumes. **`docker compose down -v` apaga o banco e as capas.**
+- O volume `capas` é preenchido só na primeira subida. Uma imagem nova em `frontend/assets/` não
+  aparece num volume que já existe: copie-a com `docker compose cp`.
+- O compose não define `NODE_ENV=production`, porque o cookie `Secure` impede o login em `http://`.
+  Defina essa variável só atrás de HTTPS, e veja [docs/deploy.md](docs/deploy.md).
 
 ## Publicação
 

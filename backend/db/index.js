@@ -3,11 +3,9 @@ import { readFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buscaNormalizadaLivro } from '../texto.js';
+import { arquivoBanco } from './caminho.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-// DB_PATH=:memory: dá aos testes um banco que some quando o processo termina.
-const arquivoBanco = process.env.DB_PATH || join(here, 'biblioteca.db');
-
 if (arquivoBanco !== ':memory:') mkdirSync(dirname(arquivoBanco), { recursive: true });
 
 export const db = new DatabaseSync(arquivoBanco);

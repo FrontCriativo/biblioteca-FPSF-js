@@ -1,0 +1,13 @@
+.git
+.gitignore
+.gitattributes
+.dockerignore
+.env
+node_modules
+backup
+backend/db/biblioteca.db*
+docs
+test
+README.md
+Dockerfile
+docker-compose.yml

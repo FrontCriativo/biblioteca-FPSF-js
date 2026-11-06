@@ -3,3 +3,5 @@ node_modules/
 backend/db/biblioteca.db
 backend/db/biblioteca.db-shm
 backend/db/biblioteca.db-wal
+# Backups têm e-mails e hashes de senha.
+backup/

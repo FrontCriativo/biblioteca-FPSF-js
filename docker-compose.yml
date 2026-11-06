@@ -1,0 +1,15 @@
+services:
+  biblioteca:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - dados:/dados
+      - capas:/app/frontend/assets
+      - backups:/app/backup
+    restart: unless-stopped
+
+volumes:
+  dados:
+  capas:
+  backups:
