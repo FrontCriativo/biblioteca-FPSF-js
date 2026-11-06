@@ -13,7 +13,7 @@ import { ErroHttp, ErroValidacao, responderJson, lerCorpo, ipDe } from './http.j
 import { criarLimitador } from './limite.js';
 import {
   criarRoteador, autenticar, senhaAtualConfere, MENSAGEM_TROCA_PENDENTE,
-  campoObrigatorio, textoLimitado, textoOpcional, emailValido, senhaNova,
+  campoObrigatorio, textoLimitado, textoOpcional, emailValido, senhaNova, inteiroPositivo,
 } from './rotas.js';
 import { definirSenha, emitirToken, apagarToken, usuarioDoToken, encerrarAcessos } from './auth.js';
 import { transacao } from './db/index.js';
@@ -80,6 +80,26 @@ const usuarioV1 = ({ id, nome, email, papel, turma, trocar_senha }) => ({
 
 const depoimentoV1 = ({ id, nome, turma, mensagem, nota, criado_em }) => ({
   id, nome, descricao_autor: turma, texto: mensagem, nota, criado_em: dataIso(criado_em),
+});
+
+/** Só o que é do leitor: sem a observação interna e sem repetir os dados da conta. */
+const reservaV1 = (r) => ({
+  id: r.id,
+  status: r.status,
+  criada_em: dataIso(r.criada_em),
+  expira_em: dataIso(r.expira_em),
+  encerrada_em: dataIso(r.encerrada_em),
+  retirada_em: dataIso(r.retirada_em),
+  devolver_ate: dataIso(r.devolver_ate),
+  renovacoes: r.renovacoes,
+  atrasada: Boolean(r.atrasada),
+  pode_renovar: Boolean(r.pode_renovar),
+  novo_prazo: dataIso(r.novo_prazo),
+  exemplar_codigo: r.exemplar_codigo,
+  livro_slug: r.livro_slug,
+  titulo: r.titulo,
+  autor: r.autor,
+  capa: r.capa,
 });
 
 function produtoV1(livro, destaques) {
@@ -226,6 +246,50 @@ const rotas = {
   },
 
   'PUT /api/v1/cliente/senha': trocarSenha,
+
+  // Reservas e lista "Quero ler" do próprio usuário: mesmas regras da API do site.
+  // Não existem no Laravel. Aqui até a coordenação age só nas próprias reservas.
+
+  'GET /api/v1/reservas': (req) => {
+    const usuario = exigirToken(req);
+    return sucesso(repo.listarReservasDoUsuario(usuario.id).map(reservaV1));
+  },
+
+  'POST /api/v1/reservas': (req, { corpo }) => {
+    const usuario = exigirToken(req);
+    const livroId = inteiroPositivo(corpo.livro_id, 'livro_id');
+    const limite = usuario.papel === 'admin' ? null : repo.LIMITE_RESERVAS_ALUNO;
+    const reserva = repo.criarReserva(livroId, usuario.id, { limite });
+    return { ...sucessoComMensagem('Reserva realizada com sucesso.', reservaV1(reserva)), status: 201 };
+  },
+
+  'POST /api/v1/reservas/:id/cancelar': (req, { params }) => {
+    const usuario = exigirToken(req);
+    const reserva = repo.mudarStatusReserva(inteiroPositivo(params.id, 'id'), 'cancelada', usuario.id);
+    return sucessoComMensagem('Reserva cancelada com sucesso.', reservaV1(reserva));
+  },
+
+  'POST /api/v1/reservas/:id/renovar': (req, { params }) => {
+    const usuario = exigirToken(req);
+    const reserva = repo.renovarReserva(inteiroPositivo(params.id, 'id'), usuario.id);
+    return sucessoComMensagem('Empréstimo renovado com sucesso.', reservaV1(reserva));
+  },
+
+  'GET /api/v1/favoritos': (req) => sucesso(repo.listarFavoritos(exigirToken(req).id)),
+
+  'PUT /api/v1/favoritos/:livroId': (req, { params }) => {
+    const usuario = exigirToken(req);
+    const livroId = inteiroPositivo(params.livroId, 'livroId');
+    if (!repo.livroExiste(livroId)) throw new ErroHttp(404, 'Livro não encontrado.');
+    repo.adicionarFavorito(usuario.id, livroId);
+    return sucessoComMensagem('Livro adicionado à lista.');
+  },
+
+  'DELETE /api/v1/favoritos/:livroId': (req, { params }) => {
+    const usuario = exigirToken(req);
+    repo.removerFavorito(usuario.id, inteiroPositivo(params.livroId, 'livroId'));
+    return sucessoComMensagem('Livro removido da lista.');
+  },
 };
 
 const roteador = criarRoteador(rotas);
