@@ -1,15 +1,69 @@
 # Publicação
 
-Como colocar o site no ar num servidor Linux, com Nginx na frente e HTTPS. Para usar contêiner,
-veja a seção Docker do [README](../README.md#docker).
+Como colocar o site no ar num servidor Linux com HTTPS. Há dois caminhos: Docker, que é o mais
+curto, ou Node com Nginx.
 
-## Antes de começar
+Tanto faz o caminho, o servidor precisa de disco permanente, porque o banco é um arquivo. Serviços
+com disco temporário apagam os dados a cada reinício ou atualização.
+
+## Docker com HTTPS automático
+
+Você precisa de um servidor Linux com Docker, com as portas 80 e 443 abertas, e de um domínio já
+apontado para o IP dele. O Caddy busca e renova o certificado sozinho.
+
+```bash
+git clone https://github.com/FrontCriativo/biblioteca-FPSF-js.git /srv/biblioteca
+cd /srv/biblioteca
+cp .env.exemplo .env     # preencha DOMINIO, ADMIN_EMAIL e ADMIN_SENHA
+docker compose -f docker-compose.producao.yml up -d --build
+docker compose -f docker-compose.producao.yml logs -f
+```
+
+Na primeira subida, o banco nasce com a conta da coordenação, as matérias e os livros de exemplo.
+Nenhuma conta de aluno de exemplo é criada. Sem `ADMIN_EMAIL` e `ADMIN_SENHA`, o contêiner para
+e explica o motivo no log.
+
+Entre no site em seguida e troque a senha da coordenação. O passo é obrigatório no primeiro acesso.
+
+Para atualizar:
+
+```bash
+git pull
+docker compose -f docker-compose.producao.yml exec -T biblioteca npm run backup
+docker compose -f docker-compose.producao.yml up -d --build
+```
+
+**Nunca rode `down -v`:** esse comando apaga o banco e as capas.
+
+Backup diário, no `crontab` do servidor:
+
+```cron
+0 2 * * * cd /srv/biblioteca && docker compose -f docker-compose.producao.yml exec -T biblioteca npm run backup
+```
+
+O backup fica no volume `backups`, no mesmo disco do banco. Guarde uma cópia fora do servidor.
+
+## Cadastrar os alunos
+
+No painel, em **Usuários**, use **Importar alunos por planilha**. A planilha vai em CSV, com as
+colunas `nome`, `email` e `turma`, até 2000 alunos por vez.
+
+- **Senhas:** o site gera uma senha provisória para cada aluno. A lista só pode ser baixada logo
+  depois de importar, e o aluno troca a senha no primeiro acesso. Apague o arquivo depois de entregar.
+- **Erros:** uma linha com problema não impede as outras. Corrija e envie a planilha de novo: quem
+  já tem conta fica como está.
+- **Senha esquecida:** a coordenação redefine pelo painel, porque o site não envia e-mail.
+
+## Node com Nginx
+
+### Antes de começar
 
 - Node.js 22.13 ou mais novo no servidor.
-- Troque as senhas das contas de exemplo, ou não rode o seed em produção.
+- Crie o banco com `NODE_ENV=production`, `ADMIN_EMAIL` e `ADMIN_SENHA` definidos. Assim, o
+  `npm run seed` cria só a conta da coordenação, sem nenhuma senha de exemplo.
 - Escolha onde ficam os dados, fora da pasta do código. Aqui: `/var/lib/biblioteca`.
 
-## Variáveis de produção
+### Variáveis de produção
 
 | Variável | Valor | Por quê |
 |---|---|---|
@@ -18,6 +72,7 @@ veja a seção Docker do [README](../README.md#docker).
 | `PORT` | `3000` | |
 | `DB_PATH` | `/var/lib/biblioteca/biblioteca.db` | Atualizar o código não mexe no banco |
 | `CONFIAR_PROXY` | `1` | Sem isso, todo mundo parece vir do mesmo IP |
+| `ADMIN_EMAIL`, `ADMIN_SENHA` | Da conta da coordenação | Só no `npm run seed`, que cria o banco |
 | `CORS_ORIGENS` | As origens do aplicativo web | Opcional. O padrão libera todas |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Do Google Cloud | Ligam o login com o Google. Veja a seção abaixo |
 | `GOOGLE_URL_RETORNO` | `https://SEU-DOMINIO/api/auth/google/retorno` | Igual à cadastrada no Google |
@@ -30,6 +85,8 @@ veja a seção Docker do [README](../README.md#docker).
 
 ## Login com o Google
 
+É opcional: o login com senha funciona sem ele. No Docker, as variáveis vão no `.env`.
+
 1. No [Google Cloud Console](https://console.cloud.google.com/apis/credentials), crie um projeto e
    configure a tela de consentimento, com os escopos `openid` e `email`.
 2. Crie uma credencial **ID do cliente OAuth**, do tipo **Aplicativo da Web**.
@@ -41,7 +98,7 @@ O Google só confirma o e-mail. Para entrar, a pessoa precisa de uma conta ativa
 exatamente esse e-mail, e ele precisa ser de um domínio de `GOOGLE_DOMINIOS`. O login com o Google
 não cria contas. Quem tem senha provisória continua obrigado a trocá-la no primeiro acesso.
 
-## Nginx com HTTPS
+### Nginx com HTTPS
 
 ```nginx
 server {
@@ -70,11 +127,11 @@ server {
 
 O certificado pode vir do Let's Encrypt, com o `certbot`.
 
-## Processo gerenciado
+### Processo gerenciado
 
 O processo precisa voltar sozinho depois de uma queda ou de reiniciar a máquina.
 
-### systemd
+#### systemd
 
 `/etc/systemd/system/biblioteca.service`:
 
@@ -103,7 +160,7 @@ sudo systemctl enable --now biblioteca
 journalctl -u biblioteca -f   # logs
 ```
 
-### pm2
+#### pm2
 
 ```bash
 NODE_ENV=production HOST=127.0.0.1 DB_PATH=/var/lib/biblioteca/biblioteca.db CONFIAR_PROXY=1 \

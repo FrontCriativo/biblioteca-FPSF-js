@@ -1412,6 +1412,10 @@ button, input, textarea{
 .cel-acoes{ display: flex; gap: 8px; flex-wrap: wrap; }
 .cel-mensagem{ min-width: 260px; max-width: 420px; white-space: pre-line; }
 .admin-ajuda{ font-size: 13.5px; color: var(--ink-soft); margin: -8px 0 18px; }
+.admin-ajuda a{ text-decoration: underline; }
+.importacao{ margin-top: 20px; font-size: 14px; display: grid; gap: 10px; justify-items: start; }
+.importacao[hidden]{ display: none; }
+.importacao ul{ padding-left: 18px; color: var(--vermelho-texto); }
 
 .mini-btn{
   border: 1.5px solid var(--line);

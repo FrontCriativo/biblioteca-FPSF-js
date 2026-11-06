@@ -3,6 +3,7 @@ import { criarHashSenha } from '../auth.js';
 import { buscaNormalizadaLivro } from '../texto.js';
 import { executadoDiretamente } from '../execucao.js';
 import { buscarOuCriarTurma } from '../repositorio.js';
+import { emailValido, senhaNova } from '../rotas.js';
 
 const MATERIAS = [
   ['literatura', 'Literatura', 'livro.png'],
@@ -66,8 +67,15 @@ const USUARIOS = [
   ['Rafael Souza', 'rafael.souza@fpsf.edu.br', 'aluno123', 'aluno', '9º ano A'],
 ];
 
+// Em produção não há conta com senha conhecida: quem publica escolhe a da coordenação.
+function contaDeProducao() {
+  const email = emailValido(process.env, 'ADMIN_EMAIL', 255);
+  const senha = senhaNova(process.env, 'ADMIN_SENHA');
+  return ['Coordenação da Biblioteca', email, senha, 'admin', null];
+}
+
 /** Insere os dados de exemplo. Rodar de novo não duplica nem altera o que já existe. */
-export function popular() {
+export function popular({ usuarios = USUARIOS } = {}) {
   transacao(() => {
     const inserirMateria = db.prepare(
       'INSERT INTO materias (slug, nome, icone) VALUES (?, ?, ?) ON CONFLICT(slug) DO NOTHING'
@@ -92,19 +100,34 @@ export function popular() {
       }
     }
 
-    // Senha padrão é pública (está neste arquivo): a conta já nasce obrigada a trocá-la.
+    // A senha do seed é conhecida (está neste arquivo ou na configuração): a conta nasce obrigada a trocá-la.
     const inserirUsuario = db.prepare(`
       INSERT INTO usuarios (nome, email, senha_hash, papel, turma_id, trocar_senha)
       VALUES (?, ?, ?, ?, ?, 1)
       ON CONFLICT(email) DO NOTHING
     `);
-    for (const [nome, email, senha, papel, turma] of USUARIOS) {
+    for (const [nome, email, senha, papel, turma] of usuarios) {
       inserirUsuario.run(nome, email, criarHashSenha(senha), papel, turma ? buscarOuCriarTurma(turma).id : null);
     }
   });
 }
 
-if (executadoDiretamente(import.meta.url)) {
+function popularProducao() {
+  let conta;
+  try {
+    conta = contaDeProducao();
+  } catch (erro) {
+    console.error(`Seed de produção recusado. ${erro.message}`);
+    console.error('Defina ADMIN_EMAIL e ADMIN_SENHA: nenhuma conta de exemplo é criada em produção.');
+    process.exit(1);
+  }
+  popular({ usuarios: [conta] });
+  console.log(`Banco populado. Coordenação: ${conta[1]}, com troca de senha no primeiro acesso.`);
+}
+
+if (executadoDiretamente(import.meta.url) && process.env.NODE_ENV === 'production') {
+  popularProducao();
+} else if (executadoDiretamente(import.meta.url)) {
   popular();
   console.log('Banco populado com sucesso.');
   console.log(`  ${MATERIAS.length} matérias, ${LIVROS.length} livros, ${USUARIOS.length} usuários.`);

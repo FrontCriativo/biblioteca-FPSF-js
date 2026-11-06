@@ -1,4 +1,5 @@
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, randomInt, scrypt, scryptSync, timingSafeEqual } from 'node:crypto';
+import { promisify } from 'node:util';
 import { db, transacao } from './db/index.js';
 import { criarLimitador } from './limite.js';
 import { normalizarEmail } from './texto.js';
@@ -10,6 +11,23 @@ export function criarHashSenha(senha) {
   const sal = randomBytes(16).toString('hex');
   const derivada = scryptSync(senha, sal, 64).toString('hex');
   return `${sal}:${derivada}`;
+}
+
+const scryptAssincrono = promisify(scrypt);
+
+/** Para hashes em lote: o scrypt roda fora da thread principal, e o site não para enquanto isso. */
+export async function criarHashSenhaEmSegundoPlano(senha) {
+  const sal = randomBytes(16).toString('hex');
+  const derivada = await scryptAssincrono(senha, sal, 64);
+  return `${sal}:${derivada.toString('hex')}`;
+}
+
+// Sem 0/O e 1/l/I: a senha é lida no papel, e o aluno digita.
+const CARACTERES_SENHA = 'abcdefghjkmnpqrstuvwxyz23456789';
+
+/** Senha aleatória para a conta nova. Vale até o primeiro acesso, quando a troca é obrigatória. */
+export function gerarSenhaProvisoria(tamanho = 10) {
+  return Array.from({ length: tamanho }, () => CARACTERES_SENHA[randomInt(CARACTERES_SENHA.length)]).join('');
 }
 
 export function conferirSenha(senha, hashArmazenado) {

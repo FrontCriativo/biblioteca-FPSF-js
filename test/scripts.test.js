@@ -44,6 +44,43 @@ describe('npm run expirar', () => {
   });
 });
 
+describe('npm run seed em produção', () => {
+  const semear = (arquivo, env) => spawnSync(process.execPath, ['--no-warnings', 'backend/db/seed.js'], {
+    cwd: RAIZ, encoding: 'utf8',
+    env: { ...process.env, DB_PATH: arquivo, NODE_ENV: 'production', ADMIN_EMAIL: '', ADMIN_SENHA: '', ...env },
+  });
+
+  test('cria só a coordenação informada, com a troca obrigatória, e nenhuma conta de exemplo', () => {
+    const arquivo = join(pasta, 'producao.db');
+    const r = semear(arquivo, { ADMIN_EMAIL: 'Coord@Escola.br', ADMIN_SENHA: 'senha-escolhida' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.doesNotMatch(r.stdout, /admin123|aluno123|senha-escolhida/);
+
+    const db = new DatabaseSync(arquivo);
+    const contas = db.prepare('SELECT email, papel, trocar_senha FROM usuarios').all().map((c) => ({ ...c }));
+    const livros = db.prepare('SELECT COUNT(*) AS n FROM livros').get().n;
+    db.close();
+    assert.deepEqual(contas, [{ email: 'coord@escola.br', papel: 'admin', trocar_senha: 1 }]);
+    assert.ok(livros > 0);
+  });
+
+  for (const [caso, env] of [
+    ['sem configuração', {}],
+    ['com senha curta', { ADMIN_EMAIL: 'coord@escola.br', ADMIN_SENHA: 'curta' }],
+    ['com e-mail inválido', { ADMIN_EMAIL: 'coord', ADMIN_SENHA: 'senha-escolhida' }],
+  ]) {
+    test(`${caso}, recusa e não cria nenhuma conta`, () => {
+      const arquivo = join(pasta, `recusado-${caso.replaceAll(' ', '-')}.db`);
+      const r = semear(arquivo, env);
+      assert.equal(r.status, 1);
+      assert.match(r.stderr, /ADMIN_EMAIL e ADMIN_SENHA/);
+      const db = new DatabaseSync(arquivo);
+      assert.equal(db.prepare('SELECT COUNT(*) AS n FROM usuarios').get().n, 0);
+      db.close();
+    });
+  }
+});
+
 describe('npm run backup', () => {
   const backups = (cwd) => readdirSync(join(cwd, 'backup')).sort();
 

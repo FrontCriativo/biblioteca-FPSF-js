@@ -51,6 +51,7 @@ backend/
   repositorio.js   SQL do domínio
   auth.js          senhas, sessões e tokens
   http.js          leitura do corpo, respostas e erros
+  planilha.js      leitura do CSV de alunos
   limite.js        limites de uso em memória
   texto.js         normalização de texto
   db/              schema.sql, migrações (index.js) e seed.js
@@ -58,7 +59,7 @@ backend/
 frontend/          páginas, css/, js/ e assets/ (capas e ícones)
 test/              testes com node:test
 docs/              guias da API, do banco e de publicação
-docker/            script de início do contêiner
+docker/            script de início do contêiner e configuração do Caddy
 ```
 
 ## API do site
@@ -101,6 +102,7 @@ Usada pelas páginas em `frontend/js/api.js`. Autenticação por cookie de sess�
 | GET | `/api/admin/turmas` | Coordenação | Turmas ativas |
 | GET | `/api/admin/usuarios` | Coordenação | Usuários |
 | POST | `/api/admin/usuarios` | Coordenação | Cria um usuário |
+| POST | `/api/admin/usuarios/importar` | Coordenação | Cria alunos a partir de um CSV e devolve as senhas provisórias |
 | POST | `/api/admin/usuarios/:id/senha` | Coordenação | Redefine a senha de outro usuário |
 | POST | `/api/admin/usuarios/:id/desativar` | Coordenação | Desativa uma conta |
 | POST | `/api/admin/usuarios/:id/reativar` | Coordenação | Reativa uma conta |
@@ -132,6 +134,7 @@ back-ends.
 | `CORS_ORIGENS` | `*` | Origens liberadas na v1, separadas por vírgula |
 | `V1_LIMITE_POR_MINUTO` | `60` | Requisições por minuto, por IP, na v1 |
 | `CONFIAR_PROXY` | | Com `1`, o IP do cliente vem do cabeçalho `X-Real-IP`. Só use atrás de proxy reverso (ver [docs/deploy.md](docs/deploy.md)) |
+| `ADMIN_EMAIL`, `ADMIN_SENHA` | | Conta da coordenação criada pelo seed com `NODE_ENV=production`. Só valem na criação do banco |
 | `GOOGLE_CLIENT_ID` | | Client ID do login com o Google. Sem ele e o segredo, o botão avisa que o login não está disponível (ver [docs/deploy.md](docs/deploy.md#login-com-o-google)) |
 | `GOOGLE_CLIENT_SECRET` | | Segredo do mesmo cliente |
 | `GOOGLE_URL_RETORNO` | `http://localhost:PORT/api/auth/google/retorno` | URL de retorno, igual à cadastrada no Google |
@@ -198,6 +201,9 @@ npm run seed
 As contas voltam às senhas de exemplo, com a troca obrigatória no primeiro acesso.
 
 ## Docker
+
+Esta seção é para rodar na sua máquina. Para publicar, use o `docker-compose.producao.yml`, com
+HTTPS automático: veja [docs/deploy.md](docs/deploy.md#docker-com-https-automático).
 
 ```bash
 docker compose up -d --build

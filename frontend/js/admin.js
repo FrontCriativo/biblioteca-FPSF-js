@@ -439,6 +439,7 @@ async function carregarUsuarios() {
   const form = document.querySelector('[data-form-usuario]');
   if (form.dataset.pronto) return;
   form.dataset.pronto = '1';
+  document.querySelector('[data-form-importar]').addEventListener('submit', importarPlanilha);
   form.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     const dados = Object.fromEntries(new FormData(evento.target));
@@ -449,6 +450,71 @@ async function carregarUsuarios() {
       carregarResumo();
     }
   });
+}
+
+// O Excel em português salva CSV em Windows-1252; o Google Planilhas, em UTF-8.
+async function lerTextoDaPlanilha(arquivo) {
+  const bytes = await arquivo.arrayBuffer();
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes);
+  }
+}
+
+async function importarPlanilha(evento) {
+  evento.preventDefault();
+  const form = evento.target;
+  const arquivo = form.planilha.files[0];
+  if (!/\.csv$/i.test(arquivo.name)) {
+    aviso('Salve a planilha como CSV antes de enviar.', true);
+    return;
+  }
+  const botao = form.querySelector('[data-botao-importar]');
+  botao.disabled = true;
+  botao.textContent = 'Importando...';
+  let resultado;
+  const enviado = await comFeedback(async () => {
+    resultado = await api.importarAlunos(await lerTextoDaPlanilha(arquivo));
+  }, 'Planilha processada.');
+  botao.disabled = false;
+  botao.textContent = 'Importar';
+  if (!enviado) return;
+  form.reset();
+  mostrarImportacao(resultado);
+  carregarUsuarios();
+  carregarResumo();
+}
+
+function mostrarImportacao({ criados, ignorados, erros }) {
+  const caixa = document.querySelector('[data-resultado-importacao]');
+  caixa.hidden = false;
+  caixa.innerHTML = `
+    <p><strong>${criados.length}</strong> aluno(s) cadastrado(s) e <strong>${ignorados.length}</strong> já existente(s), que não mudaram.</p>
+    ${criados.length ? `
+      <p>As senhas provisórias só aparecem agora. Baixe a lista e entregue a cada aluno a sua senha.</p>
+      <button class="btn btn--outline" type="button" data-baixar-senhas>Baixar senhas provisórias</button>` : ''}
+    ${erros.length ? `
+      <p><strong>${erros.length}</strong> linha(s) com problema. Corrija e envie de novo: quem já entrou não é duplicado.</p>
+      <ul>${erros.map((e) => `<li>Linha ${e.linha}: ${escaparHtml(e.motivo)}</li>`).join('')}</ul>` : ''}`;
+  caixa.querySelector('[data-baixar-senhas]')?.addEventListener('click', () => baixarSenhas(criados));
+}
+
+// O Excel executa como fórmula a célula que começa com estes sinais, e o nome veio de uma planilha.
+const celulaCsv = (valor) => {
+  const texto = String(valor ?? '');
+  return `"${(/^[=+\-@]/.test(texto) ? `'${texto}` : texto).replaceAll('"', '""')}"`;
+};
+
+function baixarSenhas(criados) {
+  const linhas = [['nome', 'email', 'turma', 'senha provisória'],
+    ...criados.map((a) => [a.nome, a.email, a.turma, a.senha])];
+  const csv = linhas.map((l) => l.map(celulaCsv).join(';')).join('\r\n');
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }));
+  link.download = 'senhas-provisorias.csv';
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 
 function botaoSituacao(u) {

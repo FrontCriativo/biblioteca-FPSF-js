@@ -62,6 +62,7 @@ export const api = {
   enviarCapa: (nome, dados) => pedir('/admin/capas', { metodo: 'POST', corpo: { nome, dados } }),
   usuarios: () => pedir('/admin/usuarios'),
   criarUsuario: (dados) => pedir('/admin/usuarios', { metodo: 'POST', corpo: dados }),
+  importarAlunos: (csv) => pedir('/admin/usuarios/importar', { metodo: 'POST', corpo: { csv } }),
   desativarUsuario: (id) => pedir(`/admin/usuarios/${id}/desativar`, { metodo: 'POST' }),
   reativarUsuario: (id) => pedir(`/admin/usuarios/${id}/reativar`, { metodo: 'POST' }),
   turmas: () => pedir('/admin/turmas'),

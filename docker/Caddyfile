@@ -1,0 +1,15 @@
+{$DOMINIO} {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	reverse_proxy biblioteca:3000 {
+		# O Node usa este cabeçalho nos limites de tentativa, com CONFIAR_PROXY=1.
+		header_up X-Real-IP {remote_host}
+	}
+}

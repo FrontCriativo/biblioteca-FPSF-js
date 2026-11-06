@@ -184,6 +184,21 @@
       <button class="btn btn--lilac" type="submit">Cadastrar</button>
     </form>
 
+    <form class="form-card admin-form" data-form-importar>
+      <h3>Importar alunos por planilha</h3>
+      <p class="admin-ajuda">
+        No Excel ou no Google Planilhas, salve como CSV. A primeira linha precisa ter as colunas
+        <strong>nome</strong>, <strong>email</strong> e <strong>turma</strong> (a turma é opcional).
+        <a download="modelo-alunos.csv" href="data:text/csv;charset=utf-8,%EF%BB%BFnome;email;turma%0D%0AMaria da Silva;maria.silva@aluno.educacao.sp.gov.br;8º ano B%0D%0A">Baixar modelo</a>
+      </p>
+      <div class="field">
+        <label for="u-planilha">Arquivo CSV</label>
+        <input id="u-planilha" name="planilha" type="file" accept=".csv,text/csv" required>
+      </div>
+      <button class="btn btn--lilac" type="submit" data-botao-importar>Importar</button>
+      <div class="importacao" data-resultado-importacao hidden></div>
+    </form>
+
     <div class="tabela-wrap">
       <table class="tabela">
         <thead>

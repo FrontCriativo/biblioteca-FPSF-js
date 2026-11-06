@@ -411,6 +411,22 @@ export function criarUsuario({ nome, email, senhaHash, papel, turma }) {
   });
 }
 
+/**
+ * alunos: { nome, email, turma, senhaHash }. Devolve os que entraram: um e-mail que já
+ * existe fica de fora sem erro, para a mesma planilha poder ser enviada de novo.
+ */
+export function criarAlunosEmLote(alunos) {
+  const inserir = db.prepare(`
+    INSERT INTO usuarios (nome, email, senha_hash, papel, turma_id, trocar_senha)
+    VALUES (?, ?, ?, 'aluno', ?, 1)
+    ON CONFLICT(email) DO NOTHING
+  `);
+  return transacao(() => alunos.filter(({ nome, email, turma, senhaHash }) => {
+    const turmaId = turma ? buscarOuCriarTurma(turma).id : null;
+    return inserir.run(nome, email, senhaHash, turmaId).changes > 0;
+  }));
+}
+
 export function emailEmUso(email, ignorarUsuarioId) {
   return Boolean(db.prepare('SELECT 1 FROM usuarios WHERE email = ? AND id <> ?').get(email, ignorarUsuarioId));
 }

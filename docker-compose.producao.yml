@@ -1,0 +1,42 @@
+# Produção: só o Caddy fica exposto, e ele cuida do certificado HTTPS. Veja docs/deploy.md.
+services:
+  biblioteca:
+    build: .
+    volumes:
+      - dados:/dados
+      - capas:/app/frontend/assets
+      - backups:/app/backup
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Seguro aqui: sem "ports", o contêiner só é alcançado pelo Caddy.
+      CONFIAR_PROXY: "1"
+      # Só usados quando o banco ainda não existe. O seed recusa se faltarem.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_SENHA: ${ADMIN_SENHA:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_URL_RETORNO: https://${DOMINIO:?defina DOMINIO no arquivo .env}/api/auth/google/retorno
+      GOOGLE_DOMINIOS: ${GOOGLE_DOMINIOS:-}
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - biblioteca
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_dados:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    environment:
+      DOMINIO: ${DOMINIO:?defina DOMINIO no arquivo .env}
+
+volumes:
+  dados:
+  capas:
+  backups:
+  caddy_dados:
+  caddy_config:

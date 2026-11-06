@@ -1,5 +1,5 @@
 import {
-  criarHashSenha, conferirSenha, abrirSessao, encerrarSessao,
+  criarHashSenha, criarHashSenhaEmSegundoPlano, gerarSenhaProvisoria, conferirSenha, abrirSessao, encerrarSessao,
   usuarioDaSessao, lerCookie, cabecalhoCookieSessao, cookieSessaoExpirado,
   loginBloqueado, segundosDeBloqueioLogin, registrarFalhaLogin, limparFalhasLogin,
   definirSenha, encerrarAcessos, buscarContaPorEmail,
@@ -14,6 +14,7 @@ import * as repo from './repositorio.js';
 import { normalizarTexto, normalizarEmail } from './texto.js';
 import { ErroHttp, ErroValidacao, ipDe } from './http.js';
 import { criarLimitador } from './limite.js';
+import { alunosDaPlanilha } from './planilha.js';
 
 const PASTA_ASSETS = fileURLToPath(new URL('../frontend/assets/', import.meta.url));
 
@@ -114,6 +115,29 @@ export function senhaNova(corpo, campo) {
     throw new ErroValidacao(`A senha precisa ter ao menos ${TAMANHO_MINIMO_SENHA} caracteres.`);
   }
   return senha;
+}
+
+/** Confere cada linha da planilha: uma linha ruim não impede as outras de entrarem. */
+function separarAlunos(alunos) {
+  const validos = [];
+  const ignorados = [];
+  const erros = [];
+  const vistos = new Set();
+  for (const aluno of alunos) {
+    try {
+      const nome = textoLimitado(aluno, 'nome', 255);
+      const email = emailValido(aluno, 'email', 255);
+      const turma = textoOpcional(aluno, 'turma', 40);
+      if (vistos.has(email)) throw new ErroValidacao('E-mail repetido na planilha.');
+      vistos.add(email);
+      if (buscarContaPorEmail(email)) ignorados.push({ linha: aluno.linha, email });
+      else validos.push({ linha: aluno.linha, nome, email, turma });
+    } catch (erro) {
+      if (!(erro instanceof ErroValidacao)) throw erro;
+      erros.push({ linha: aluno.linha, motivo: erro.message });
+    }
+  }
+  return { validos, ignorados, erros };
 }
 
 // Envios de depoimento por IP. O limite é folgado porque a escola inteira sai pelo mesmo IP.
@@ -436,6 +460,31 @@ const rotas = {
       throw new ErroHttp(409, 'Já existe um usuário com esse e-mail.');
     }
     return { corpo: repo.criarUsuario({ nome, email, senhaHash: criarHashSenha(senha), papel, turma }), status: 201 };
+  },
+
+  // Só cria alunos: conta da coordenação continua sendo cadastrada uma a uma.
+  'POST /api/admin/usuarios/importar': async (req, { corpo }) => {
+    exigirAdmin(req);
+    const { validos, ignorados, erros } = separarAlunos(alunosDaPlanilha(campoObrigatorio(corpo, 'csv')));
+
+    const preparados = await Promise.all(validos.map(async (aluno) => {
+      const senha = gerarSenhaProvisoria();
+      return { ...aluno, senha, senhaHash: await criarHashSenhaEmSegundoPlano(senha) };
+    }));
+    const criados = repo.criarAlunosEmLote(preparados);
+
+    // Quem foi cadastrado por outra pessoa enquanto os hashes eram calculados também é ignorado.
+    const entraram = new Set(criados.map((a) => a.email));
+    for (const { linha, email } of preparados) {
+      if (!entraram.has(email)) ignorados.push({ linha, email });
+    }
+    return {
+      corpo: {
+        criados: criados.map(({ nome, email, turma, senha }) => ({ nome, email, turma, senha })),
+        ignorados,
+        erros,
+      },
+    };
   },
 
   'POST /api/admin/usuarios/:id/senha': (req, { corpo, params }) => {
