@@ -1,6 +1,7 @@
 import { db, transacao } from './index.js';
 import { criarHashSenha } from '../auth.js';
 import { buscaNormalizadaLivro } from '../texto.js';
+import { executadoDiretamente } from '../execucao.js';
 
 const MATERIAS = [
   ['literatura', 'Literatura', 'livro.png'],
@@ -64,46 +65,52 @@ const USUARIOS = [
   ['Rafael Souza', 'rafael.souza@fpsf.edu.br', 'aluno123', 'aluno', '9º ano A'],
 ];
 
-transacao(() => {
-  const inserirMateria = db.prepare(
-    'INSERT INTO materias (slug, nome, icone) VALUES (?, ?, ?) ON CONFLICT(slug) DO NOTHING'
-  );
-  for (const m of MATERIAS) inserirMateria.run(...m);
+/** Insere os dados de exemplo. Rodar de novo não duplica nem altera o que já existe. */
+export function popular() {
+  transacao(() => {
+    const inserirMateria = db.prepare(
+      'INSERT INTO materias (slug, nome, icone) VALUES (?, ?, ?) ON CONFLICT(slug) DO NOTHING'
+    );
+    for (const m of MATERIAS) inserirMateria.run(...m);
 
-  const inserirLivro = db.prepare(`
-    INSERT INTO livros (slug, titulo, autor, materia_slug, capa, sinopse, paginas, busca_normalizada)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(slug) DO NOTHING
-  `);
-  const inserirExemplar = db.prepare(
-    'INSERT INTO exemplares (livro_id, codigo) VALUES (?, ?) ON CONFLICT(codigo) DO NOTHING'
-  );
+    const inserirLivro = db.prepare(`
+      INSERT INTO livros (slug, titulo, autor, materia_slug, capa, sinopse, paginas, busca_normalizada)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(slug) DO NOTHING
+    `);
+    const inserirExemplar = db.prepare(
+      'INSERT INTO exemplares (livro_id, codigo) VALUES (?, ?) ON CONFLICT(codigo) DO NOTHING'
+    );
 
-  for (const l of LIVROS) {
-    inserirLivro.run(l.slug, l.titulo, l.autor, l.materia, l.capa, l.sinopse, l.paginas,
-                     buscaNormalizadaLivro(l.titulo, l.autor));
-    const { id } = db.prepare('SELECT id FROM livros WHERE slug = ?').get(l.slug);
-    for (let i = 1; i <= l.exemplares; i++) {
-      inserirExemplar.run(id, `${l.slug.toUpperCase().slice(0, 8)}-${String(i).padStart(3, '0')}`);
+    for (const l of LIVROS) {
+      inserirLivro.run(l.slug, l.titulo, l.autor, l.materia, l.capa, l.sinopse, l.paginas,
+                       buscaNormalizadaLivro(l.titulo, l.autor));
+      const { id } = db.prepare('SELECT id FROM livros WHERE slug = ?').get(l.slug);
+      for (let i = 1; i <= l.exemplares; i++) {
+        inserirExemplar.run(id, `${l.slug.toUpperCase().slice(0, 8)}-${String(i).padStart(3, '0')}`);
+      }
     }
-  }
 
-  // Senha padrão é pública (está neste arquivo): a conta já nasce obrigada a trocá-la.
-  const inserirUsuario = db.prepare(`
-    INSERT INTO usuarios (nome, email, senha_hash, papel, turma, trocar_senha)
-    VALUES (?, ?, ?, ?, ?, 1)
-    ON CONFLICT(email) DO NOTHING
-  `);
-  for (const [nome, email, senha, papel, turma] of USUARIOS) {
-    inserirUsuario.run(nome, email, criarHashSenha(senha), papel, turma);
-  }
-});
+    // Senha padrão é pública (está neste arquivo): a conta já nasce obrigada a trocá-la.
+    const inserirUsuario = db.prepare(`
+      INSERT INTO usuarios (nome, email, senha_hash, papel, turma, trocar_senha)
+      VALUES (?, ?, ?, ?, ?, 1)
+      ON CONFLICT(email) DO NOTHING
+    `);
+    for (const [nome, email, senha, papel, turma] of USUARIOS) {
+      inserirUsuario.run(nome, email, criarHashSenha(senha), papel, turma);
+    }
+  });
+}
 
-console.log('Banco populado com sucesso.');
-console.log(`  ${MATERIAS.length} matérias, ${LIVROS.length} livros, ${USUARIOS.length} usuários.`);
-console.log('\n  Contas criadas com senha padrão (se ainda não existiam):');
-console.log('    Admin:  admin@fpsf.edu.br / admin123');
-console.log('    Aluno:  beatriz.lima@fpsf.edu.br / aluno123');
-console.log('\n  No primeiro acesso, cada conta é levada a trocar a senha padrão.');
-console.log('  Faça isso antes de colocar o site no ar: qualquer pessoa que leia');
-console.log('  este código consegue entrar com elas.\n');
+if (executadoDiretamente(import.meta.url)) {
+  popular();
+  console.log('Banco populado com sucesso.');
+  console.log(`  ${MATERIAS.length} matérias, ${LIVROS.length} livros, ${USUARIOS.length} usuários.`);
+  console.log('\n  Contas criadas com senha padrão (se ainda não existiam):');
+  console.log('    Admin:  admin@fpsf.edu.br / admin123');
+  console.log('    Aluno:  beatriz.lima@fpsf.edu.br / aluno123');
+  console.log('\n  No primeiro acesso, cada conta é levada a trocar a senha padrão.');
+  console.log('  Faça isso antes de colocar o site no ar: qualquer pessoa que leia');
+  console.log('  este código consegue entrar com elas.\n');
+}

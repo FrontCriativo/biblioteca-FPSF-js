@@ -124,6 +124,11 @@ export function limparFalhasLogin(email) {
   falhasLogin.delete(`email:${email.toLowerCase()}`);
 }
 
+/** Só para os testes: cada caso começa sem tentativas acumuladas. */
+export function zerarFalhasLogin() {
+  falhasLogin.clear();
+}
+
 /** Tira do Map os registros cuja janela já passou, para ele não crescer sem limite. */
 export function apagarFalhasLoginVencidas() {
   const agora = Date.now();

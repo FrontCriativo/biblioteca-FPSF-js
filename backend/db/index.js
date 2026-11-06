@@ -5,9 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { buscaNormalizadaLivro } from '../texto.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const arquivoBanco = join(here, 'biblioteca.db');
+// DB_PATH=:memory: dá aos testes um banco que some quando o processo termina.
+const arquivoBanco = process.env.DB_PATH || join(here, 'biblioteca.db');
 
-mkdirSync(here, { recursive: true });
+if (arquivoBanco !== ':memory:') mkdirSync(dirname(arquivoBanco), { recursive: true });
 
 export const db = new DatabaseSync(arquivoBanco);
 

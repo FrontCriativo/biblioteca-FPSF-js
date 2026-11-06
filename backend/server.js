@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { resolverRota, ErroHttp, apagarEnviosDepoimentoVencidos } from './rotas.js';
 import { expirarReservasVencidas } from './repositorio.js';
 import { apagarSessoesVencidas, apagarFalhasLoginVencidas } from './auth.js';
+import { executadoDiretamente } from './execucao.js';
 
 const PORTA = Number(process.env.PORT) || 3000;
 const RAIZ_FRONT = fileURLToPath(new URL('../frontend/', import.meta.url));
@@ -108,20 +109,17 @@ async function atender(req, res) {
 
 // O handler é async: um erro solto aqui viraria rejeição não tratada e derrubaria
 // o processo. Nenhuma requisição, por mais estranha, pode tirar o site do ar.
-const servidor = createServer(async (req, res) => {
-  try {
-    await atender(req, res);
-  } catch (erro) {
-    console.error('Requisição recusada:', erro.message);
-    if (!res.headersSent) responderJson(res, 400, { erro: 'Requisição inválida.' });
-    else res.end();
-  }
-});
-
-// Rede de segurança: registra no log em vez de encerrar o processo.
-process.on('unhandledRejection', (motivo) => {
-  console.error('Promessa rejeitada sem tratamento:', motivo);
-});
+export function criarServidor() {
+  return createServer(async (req, res) => {
+    try {
+      await atender(req, res);
+    } catch (erro) {
+      console.error('Requisição recusada:', erro.message);
+      if (!res.headersSent) responderJson(res, 400, { erro: 'Requisição inválida.' });
+      else res.end();
+    }
+  });
+}
 
 // Faxina: sessões vencidas saem do banco na inicialização e depois a cada hora.
 function limparVencidos() {
@@ -134,10 +132,20 @@ function limparVencidos() {
     console.error('Erro ao apagar sessões vencidas:', erro);
   }
 }
-limparVencidos();
-setInterval(limparVencidos, 60 * 60 * 1000).unref();
 
-servidor.listen(PORTA, () => {
-  console.log(`\n  Biblioteca Virtual FPSF`);
-  console.log(`  Servidor em http://localhost:${PORTA}\n`);
-});
+// Só quando executado com `node backend/server.js`: quem importa (os testes) escolhe
+// a própria porta e não pode herdar timers nem o tratamento global de erros.
+if (executadoDiretamente(import.meta.url)) {
+  // Rede de segurança: registra no log em vez de encerrar o processo.
+  process.on('unhandledRejection', (motivo) => {
+    console.error('Promessa rejeitada sem tratamento:', motivo);
+  });
+
+  limparVencidos();
+  setInterval(limparVencidos, 60 * 60 * 1000).unref();
+
+  criarServidor().listen(PORTA, () => {
+    console.log(`\n  Biblioteca Virtual FPSF`);
+    console.log(`  Servidor em http://localhost:${PORTA}\n`);
+  });
+}

@@ -98,6 +98,11 @@ export function apagarEnviosDepoimentoVencidos() {
   }
 }
 
+/** Só para os testes: cada caso começa sem envios acumulados. */
+export function zerarEnviosDepoimento() {
+  enviosDepoimento.clear();
+}
+
 const STATUS_DEPOIMENTO = ['pendente', 'aprovado', 'recusado'];
 
 function inteiroPositivo(valor, campo, padrao = null) {
