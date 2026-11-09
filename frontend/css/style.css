@@ -259,18 +259,23 @@ button, input, textarea{
   position: relative;
   overflow: hidden;
 }
+/* Logo da escola como marca-d'água no canto do hero */
 .hero::after{
   content: "";
   position: absolute;
-  right: -120px;
-  top: -80px;
-  width: 420px;
-  height: 420px;
+  right: -20px;
+  top: -30px;
+  width: 440px;
+  height: 440px;
   border-radius: 50%;
-  border: 90px solid rgba(129,119,201,.16);
+  background: url("../assets/fpsf.jpg") center / cover no-repeat;
+  opacity: .14;
+  transform: rotate(15deg);
+  pointer-events: none;
 }
 .hero .container{
   position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
   gap: 48px;
