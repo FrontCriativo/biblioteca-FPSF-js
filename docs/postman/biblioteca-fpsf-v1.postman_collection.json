@@ -186,7 +186,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"beatriz.lima@fpsf.edu.br\",\n  \"senha\": \"aluno123\",\n  \"device_name\": \"postman\"\n}",
+              "raw": "{\n  \"email\": \"beatriz.lima@fpsf.edu.br\",\n  \"senha\": \"Aluno1.2026\",\n  \"device_name\": \"postman\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -454,7 +454,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"beatriz.lima@fpsf.edu.br\",\n  \"password\": \"aluno123\"\n}",
+              "raw": "{\n  \"email\": \"beatriz.lima@fpsf.edu.br\",\n  \"password\": \"Aluno1.2026\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

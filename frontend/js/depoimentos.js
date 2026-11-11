@@ -1,4 +1,4 @@
-// Página de depoimentos: lista os aprovados e envia novos para a moderação.
+// Página de depoimentos: lista os publicados e envia novos, que aparecem na hora.
 
 import { api, montarSessaoNavbar, cartaoDepoimento, escaparHtml } from './api.js';
 
@@ -97,6 +97,8 @@ function ligarFormulario(form) {
     form.reset();
     mostrarNota(0);
     botao.disabled = false;
-    mostrarFeedback('Obrigado! Seu depoimento foi enviado e vai aparecer aqui depois de aprovado pela biblioteca.');
+    mostrarFeedback('Obrigado! Seu depoimento foi publicado.');
+    await desenharDepoimentos();
+    grade.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 }

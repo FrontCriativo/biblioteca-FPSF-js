@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  usarServidor, pedir, entrarV1, tokenPronto, entrarPronto, idDoLivro, db, ADMIN, BEATRIZ, RAFAEL, SENHA_ALUNO,
+  usarServidor, pedir, entrarV1, tokenPronto, entrarPronto, idDoLivro, db, ADMIN, BEATRIZ, RAFAEL, SENHA_ALUNO, SENHA_RAFAEL,
 } from './helpers/servidor.js';
 
 usarServidor();
@@ -37,7 +37,7 @@ describe('acesso', () => {
   });
 
   test('conta com senha provisória recebe 403 em todas', async () => {
-    const token = await entrarV1(BEATRIZ, SENHA_ALUNO);
+    const token = await entrarV1(RAFAEL, SENHA_RAFAEL);
     for (const [metodo, caminho] of rotas) {
       const r = await pedir(metodo, caminho, { token });
       assert.equal(r.status, 403, `${metodo} ${caminho}`);

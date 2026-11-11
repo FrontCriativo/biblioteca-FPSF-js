@@ -77,6 +77,7 @@ export const api = {
   },
   aprovarDepoimento: (id) => pedir(`/admin/depoimentos/${id}/aprovar`, { metodo: 'POST' }),
   recusarDepoimento: (id) => pedir(`/admin/depoimentos/${id}/recusar`, { metodo: 'POST' }),
+  excluirDepoimento: (id) => pedir(`/admin/depoimentos/${id}`, { metodo: 'DELETE' }),
 
   mensagensAdmin: (status) => {
     const sufixo = status && status !== 'todas' ? `?status=${status}` : '';

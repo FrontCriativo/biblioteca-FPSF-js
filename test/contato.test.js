@@ -130,7 +130,8 @@ describe('painel', () => {
     const admin = await entrarPronto(ADMIN);
     const id = await enviar();
     await enviar();
-    await pedir('POST', '/api/depoimentos', { corpo: { nome: 'Ana', turma: '6º', mensagem: 'Boa.', nota: 5 } });
+    await pedir('POST', '/api/depoimentos', { corpo: { nome: 'Ana', turma: '6º', mensagem: 'Boa.', nota: 5 } }); // já aprovado
+    db.prepare(`INSERT INTO depoimentos (nome, turma, mensagem, nota) VALUES ('Antigo', '7º', 'Pendente.', 4)`).run();
     await pedir('POST', `/api/admin/mensagens/${id}/status`, { cookie: admin, corpo: { status: 'lida' } });
     const { corpo } = await pedir('GET', '/api/admin/resumo', { cookie: admin });
     assert.equal(corpo.mensagens_novas, 1);

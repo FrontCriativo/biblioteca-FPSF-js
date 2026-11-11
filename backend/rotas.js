@@ -576,7 +576,7 @@ const rotas = {
     if (!enviosDepoimento.consumir(ipDe(req))) {
       throw new ErroHttp(429, 'Muitos depoimentos enviados daqui. Tente de novo mais tarde.');
     }
-    // Sempre entra como pendente: só aparece no site depois da moderação.
+    // Entra aprovado e aparece na hora; a coordenação pode recusar ou excluir depois.
     return { corpo: repo.criarDepoimento(dados), status: 201 };
   },
 
@@ -624,6 +624,12 @@ const rotas = {
   'POST /api/admin/depoimentos/:id/recusar': (req, { params }) => {
     exigirAdmin(req);
     return { corpo: repo.moderarDepoimento(inteiroPositivo(params.id, 'id'), 'recusado') };
+  },
+
+  'DELETE /api/admin/depoimentos/:id': (req, { params }) => {
+    exigirAdmin(req);
+    repo.excluirDepoimento(inteiroPositivo(params.id, 'id'));
+    return { corpo: { ok: true } };
   },
 };
 

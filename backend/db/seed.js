@@ -61,17 +61,19 @@ const LIVROS = [
   },
 ];
 
+// O último campo diz se a conta nasce obrigada a trocar a senha. A coordenação e a Beatriz têm
+// senha fixa, sem troca obrigatória.
 const USUARIOS = [
-  ['Coordenação da Biblioteca', 'admin@fpsf.edu.br', 'admin123', 'admin', null],
-  ['Beatriz Lima', 'beatriz.lima@fpsf.edu.br', 'aluno123', 'aluno', '8º ano B'],
-  ['Rafael Souza', 'rafael.souza@fpsf.edu.br', 'aluno123', 'aluno', '9º ano A'],
+  ['Coordenação da Biblioteca', 'admin@fpsf.edu.br', 'Admin.2026', 'admin', null, false],
+  ['Beatriz Lima', 'beatriz.lima@fpsf.edu.br', 'Aluno1.2026', 'aluno', '8º ano B', false],
+  ['Rafael Souza', 'rafael.souza@fpsf.edu.br', 'aluno123', 'aluno', '9º ano A', true],
 ];
 
 // Em produção não há conta com senha conhecida: quem publica escolhe a da coordenação.
 function contaDeProducao() {
   const email = emailValido(process.env, 'ADMIN_EMAIL', 255);
   const senha = senhaNova(process.env, 'ADMIN_SENHA');
-  return ['Coordenação da Biblioteca', email, senha, 'admin', null];
+  return ['Coordenação da Biblioteca', email, senha, 'admin', null, true];
 }
 
 /** Insere os dados de exemplo. Rodar de novo não duplica nem altera o que já existe. */
@@ -100,14 +102,14 @@ export function popular({ usuarios = USUARIOS } = {}) {
       }
     }
 
-    // A senha do seed é conhecida (está neste arquivo ou na configuração): a conta nasce obrigada a trocá-la.
     const inserirUsuario = db.prepare(`
       INSERT INTO usuarios (nome, email, senha_hash, papel, turma_id, trocar_senha)
-      VALUES (?, ?, ?, ?, ?, 1)
+      VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(email) DO NOTHING
     `);
-    for (const [nome, email, senha, papel, turma] of usuarios) {
-      inserirUsuario.run(nome, email, criarHashSenha(senha), papel, turma ? buscarOuCriarTurma(turma).id : null);
+    for (const [nome, email, senha, papel, turma, trocarSenha] of usuarios) {
+      inserirUsuario.run(nome, email, criarHashSenha(senha), papel, turma ? buscarOuCriarTurma(turma).id : null,
+                         trocarSenha ? 1 : 0);
     }
   });
 }
@@ -131,10 +133,10 @@ if (executadoDiretamente(import.meta.url) && process.env.NODE_ENV === 'productio
   popular();
   console.log('Banco populado com sucesso.');
   console.log(`  ${MATERIAS.length} matérias, ${LIVROS.length} livros, ${USUARIOS.length} usuários.`);
-  console.log('\n  Contas criadas com senha padrão (se ainda não existiam):');
-  console.log('    Admin:  admin@fpsf.edu.br / admin123');
-  console.log('    Aluno:  beatriz.lima@fpsf.edu.br / aluno123');
-  console.log('\n  No primeiro acesso, cada conta é levada a trocar a senha padrão.');
-  console.log('  Faça isso antes de colocar o site no ar: qualquer pessoa que leia');
-  console.log('  este código consegue entrar com elas.\n');
+  console.log('\n  Contas criadas (se ainda não existiam):');
+  console.log('    Admin:  admin@fpsf.edu.br / Admin.2026');
+  console.log('    Aluno:  beatriz.lima@fpsf.edu.br / Aluno1.2026');
+  console.log('    Aluno:  rafael.souza@fpsf.edu.br / aluno123 (troca no primeiro acesso)');
+  console.log('\n  Essas senhas estão no código: qualquer pessoa que o leia consegue entrar.');
+  console.log('  Em produção (NODE_ENV=production) nenhuma delas é criada.\n');
 }

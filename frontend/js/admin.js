@@ -162,14 +162,14 @@ function montarDialogoObservacao() {
 
 document.addEventListener('click', async (evento) => {
   const alvo = evento.target.closest(
-    '[data-retirar], [data-devolver], [data-cancelar], [data-excluir], [data-add-exemplar], [data-aprovar], [data-recusar], [data-renovar], [data-desativar], [data-reativar], [data-marcar-lida], [data-responder]'
+    '[data-retirar], [data-devolver], [data-cancelar], [data-excluir], [data-add-exemplar], [data-aprovar], [data-recusar], [data-renovar], [data-desativar], [data-reativar], [data-marcar-lida], [data-responder], [data-excluir-depoimento]'
   );
   if (!alvo) return;
   alvo.disabled = true;
 
   const {
     retirar, devolver, cancelar, excluir, addExemplar, aprovar, recusar, renovar, desativar, reativar, nome,
-    marcarLida, responder,
+    marcarLida, responder, excluirDepoimento,
   } = alvo.dataset;
   let ok = false;
 
@@ -206,8 +206,15 @@ document.addEventListener('click', async (evento) => {
   }
 
   if (aprovar) ok = await comFeedback(() => api.aprovarDepoimento(aprovar), 'Depoimento aprovado: ele já aparece no site.');
-  if (recusar) ok = await comFeedback(() => api.recusarDepoimento(recusar), 'Depoimento recusado.');
-  if (aprovar || recusar) {
+  if (recusar) ok = await comFeedback(() => api.recusarDepoimento(recusar), 'Depoimento recusado: ele saiu do site.');
+  if (excluirDepoimento) {
+    if (!confirm('Excluir este depoimento? Ele some do site e do painel, e a ação não pode ser desfeita.')) {
+      alvo.disabled = false;
+      return;
+    }
+    ok = await comFeedback(() => api.excluirDepoimento(excluirDepoimento), 'Depoimento excluído.');
+  }
+  if (aprovar || recusar || excluirDepoimento) {
     alvo.disabled = false;
     if (ok) {
       carregarDepoimentos();
@@ -566,7 +573,8 @@ async function carregarDepoimentos() {
       <td>
         <div class="cel-acoes">
           ${d.status !== 'aprovado' ? `<button class="mini-btn" data-aprovar="${d.id}">Aprovar</button>` : ''}
-          ${d.status !== 'recusado' ? `<button class="mini-btn mini-btn--perigo" data-recusar="${d.id}">Recusar</button>` : ''}
+          ${d.status !== 'recusado' ? `<button class="mini-btn" data-recusar="${d.id}">Recusar</button>` : ''}
+          <button class="mini-btn mini-btn--perigo" data-excluir-depoimento="${d.id}">Excluir</button>
         </div>
       </td>
     </tr>`;

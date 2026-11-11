@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  usarServidor, pedir, entrar, entrarPronto, tokenPronto, db, ADMIN, BEATRIZ, RAFAEL, SENHA_ADMIN, SENHA_ALUNO,
+  usarServidor, pedir, entrar, entrarPronto, tokenPronto, db, ADMIN, BEATRIZ, RAFAEL, SENHA_ADMIN, SENHA_ALUNO, SENHA_RAFAEL,
 } from './helpers/servidor.js';
 
 usarServidor();
@@ -47,13 +47,13 @@ describe('perfil obrigatório', () => {
   });
 
   test('senha provisória vem antes do perfil', async () => {
-    const cookie = await entrar(BEATRIZ, SENHA_ALUNO);
+    const cookie = await entrar(RAFAEL, SENHA_RAFAEL);
     const r = await pedir('PUT', '/api/eu/perfil', { cookie, corpo: DADOS });
     assert.equal(r.status, 403);
     assert.equal(r.corpo.erro, 'Troque sua senha provisória antes de continuar.');
 
     const troca = await pedir('POST', '/api/eu/senha', {
-      cookie, corpo: { senha_atual: SENHA_ALUNO, nova_senha: 'senhaNova123' },
+      cookie, corpo: { senha_atual: SENHA_RAFAEL, nova_senha: 'senhaNova123' },
     });
     assert.equal(troca.status, 200);
     assert.equal((await pedir('PUT', '/api/eu/perfil', { cookie, corpo: DADOS })).status, 200);

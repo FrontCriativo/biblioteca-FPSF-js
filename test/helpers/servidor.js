@@ -12,11 +12,16 @@ const { zerarLimites } = await import('../../backend/limite.js');
 
 export { db };
 
-export const SENHA_ADMIN = 'admin123';
-export const SENHA_ALUNO = 'aluno123';
+// Senhas do seed. A coordenação e a Beatriz têm senha fixa, sem troca obrigatória;
+// o Rafael é a conta que nasce com a troca pendente.
+export const SENHA_ADMIN = 'Admin.2026';
+export const SENHA_ALUNO = 'Aluno1.2026';
+export const SENHA_RAFAEL = 'aluno123';
 export const ADMIN = 'admin@fpsf.edu.br';
 export const BEATRIZ = 'beatriz.lima@fpsf.edu.br';
 export const RAFAEL = 'rafael.souza@fpsf.edu.br';
+
+const SENHAS = { [ADMIN]: SENHA_ADMIN, [BEATRIZ]: SENHA_ALUNO, [RAFAEL]: SENHA_RAFAEL };
 
 let servidor;
 let base;
@@ -107,7 +112,7 @@ export async function entrar(email, senha) {
 /** Login de uma conta que já passou pela troca de senha e pelo perfil obrigatórios. */
 export async function entrarPronto(email) {
   db.prepare('UPDATE usuarios SET trocar_senha = 0, perfil_confirmado = 1 WHERE email = ?').run(email);
-  return entrar(email, email === ADMIN ? SENHA_ADMIN : SENHA_ALUNO);
+  return entrar(email, SENHAS[email]);
 }
 
 /** Login na v1. Devolve o token. */
@@ -120,7 +125,7 @@ export async function entrarV1(email, senha, device_name) {
 /** Token de uma conta que já passou pela troca de senha obrigatória. */
 export async function tokenPronto(email, device_name) {
   db.prepare('UPDATE usuarios SET trocar_senha = 0 WHERE email = ?').run(email);
-  return entrarV1(email, email === ADMIN ? SENHA_ADMIN : SENHA_ALUNO, device_name);
+  return entrarV1(email, SENHAS[email], device_name);
 }
 
 export const idDoLivro = (slug) => db.prepare('SELECT id FROM livros WHERE slug = ?').get(slug).id;

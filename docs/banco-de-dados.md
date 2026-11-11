@@ -110,7 +110,7 @@ reserva aberta, e não um campo do livro.
 | `usuario_id` | INTEGER | Chave para `usuarios`, se quem escreveu estava logado |
 | `nome`, `turma`, `mensagem` | TEXT | `turma` é texto livre: quem escreve pode não ter login |
 | `nota` | INTEGER | De 1 a 5 |
-| `status` | TEXT | `pendente`, `aprovado` ou `recusado` |
+| `status` | TEXT | `pendente`, `aprovado` ou `recusado`. O envio grava `aprovado`; `pendente` só em bancos antigos |
 | `criado_em` | TEXT | |
 
 ### `favoritos`

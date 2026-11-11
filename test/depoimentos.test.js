@@ -8,11 +8,11 @@ const DEPOIMENTO = { nome: 'Ana', turma: '6º ano A', mensagem: 'A biblioteca é
 
 const enviar = async (cookie) => (await pedir('POST', '/api/depoimentos', { cookie, corpo: DEPOIMENTO })).corpo.id;
 
-test('qualquer pessoa envia e o depoimento entra como pendente', async () => {
+test('qualquer pessoa envia e o depoimento aparece na hora', async () => {
   const r = await pedir('POST', '/api/depoimentos', { corpo: DEPOIMENTO });
   assert.equal(r.status, 201);
-  assert.equal(r.corpo.status, 'pendente');
-  assert.deepEqual((await pedir('GET', '/api/depoimentos')).corpo, []);
+  assert.equal(r.corpo.status, 'aprovado');
+  assert.deepEqual((await pedir('GET', '/api/depoimentos')).corpo.map((d) => d.id), [r.corpo.id]);
 });
 
 test('quem está logado fica ligado ao depoimento', async () => {
@@ -29,12 +29,16 @@ test('valida campos, tamanho e nota', async () => {
   assert.equal(nota.corpo.erro, 'A nota deve ser um número de 1 a 5.');
 });
 
+// Depoimento enviado antes de a publicação ser imediata.
+const pendenteAntigo = () => Number(db.prepare(`
+  INSERT INTO depoimentos (nome, turma, mensagem, nota) VALUES ('Antigo', '7º ano', 'Ainda pendente.', 4)
+`).run().lastInsertRowid);
+
 test('o público só vê os aprovados, sem dados de moderação', async () => {
   const admin = await entrarPronto(ADMIN);
   const aprovado = await enviar();
   const recusado = await enviar();
-  await enviar();
-  await pedir('POST', `/api/admin/depoimentos/${aprovado}/aprovar`, { cookie: admin });
+  pendenteAntigo();
   await pedir('POST', `/api/admin/depoimentos/${recusado}/recusar`, { cookie: admin });
 
   const { corpo } = await pedir('GET', '/api/depoimentos');
@@ -45,8 +49,7 @@ test('o público só vê os aprovados, sem dados de moderação', async () => {
 test('a moderação filtra por status e traz os pendentes primeiro', async () => {
   const admin = await entrarPronto(ADMIN);
   const aprovado = await enviar();
-  const pendente = await enviar();
-  await pedir('POST', `/api/admin/depoimentos/${aprovado}/aprovar`, { cookie: admin });
+  const pendente = pendenteAntigo();
 
   const todos = await pedir('GET', '/api/admin/depoimentos', { cookie: admin });
   assert.deepEqual(todos.corpo.map((d) => d.id), [pendente, aprovado]);
@@ -60,6 +63,23 @@ test('moderar é só para a coordenação; depoimento inexistente é 404', async
   assert.equal(aluno.status, 403);
   const nada = await pedir('POST', '/api/admin/depoimentos/99999/aprovar', { cookie: await entrarPronto(ADMIN) });
   assert.equal(nada.status, 404);
+});
+
+test('a coordenação exclui um depoimento, que some do site e do painel', async () => {
+  const admin = await entrarPronto(ADMIN);
+  const id = await enviar();
+  const r = await pedir('DELETE', `/api/admin/depoimentos/${id}`, { cookie: admin });
+  assert.equal(r.status, 200);
+  assert.deepEqual((await pedir('GET', '/api/depoimentos')).corpo, []);
+  assert.deepEqual((await pedir('GET', '/api/admin/depoimentos', { cookie: admin })).corpo, []);
+  assert.equal((await pedir('DELETE', `/api/admin/depoimentos/${id}`, { cookie: admin })).status, 404);
+});
+
+test('excluir é só para a coordenação', async () => {
+  const id = await enviar();
+  assert.equal((await pedir('DELETE', `/api/admin/depoimentos/${id}`)).status, 401);
+  assert.equal((await pedir('DELETE', `/api/admin/depoimentos/${id}`, { cookie: await entrarPronto(BEATRIZ) })).status, 403);
+  assert.equal((await pedir('GET', '/api/depoimentos')).corpo.length, 1);
 });
 
 test('mais de 20 envios por hora do mesmo IP é 429', async () => {

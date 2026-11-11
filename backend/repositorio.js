@@ -467,12 +467,13 @@ export function buscarOuCriarTurma(nome) {
   return db.prepare('SELECT id, nome FROM turmas WHERE nome = ?').get(nome);
 }
 
+/** Entra já aprovado: aparece no site na hora, e a coordenação pode recusar ou excluir depois. */
 export function criarDepoimento({ usuarioId, nome, turma, mensagem, nota }) {
   const { lastInsertRowid } = db.prepare(`
-    INSERT INTO depoimentos (usuario_id, nome, turma, mensagem, nota)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO depoimentos (usuario_id, nome, turma, mensagem, nota, status)
+    VALUES (?, ?, ?, ?, ?, 'aprovado')
   `).run(usuarioId ?? null, nome, turma, mensagem, nota);
-  return { id: Number(lastInsertRowid), status: 'pendente' };
+  return { id: Number(lastInsertRowid), status: 'aprovado' };
 }
 
 /** Só os aprovados, sem dados de quem enviou além do nome e da turma. */
@@ -504,6 +505,14 @@ export function moderarDepoimento(id, status) {
     throw Object.assign(new Error('Depoimento não encontrado.'), { status: 404 });
   }
   return db.prepare('SELECT id, status FROM depoimentos WHERE id = ?').get(id);
+}
+
+/** Apaga de vez, para conteúdo ofensivo. Recusar só esconde. */
+export function excluirDepoimento(id) {
+  const { changes } = db.prepare('DELETE FROM depoimentos WHERE id = ?').run(id);
+  if (!changes) {
+    throw Object.assign(new Error('Depoimento não encontrado.'), { status: 404 });
+  }
 }
 
 /** Os livros da lista "Quero ler", do mais recente para o mais antigo, no formato do catálogo. */

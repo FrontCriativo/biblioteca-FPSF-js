@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   usarServidor, db, pedir, entrar, entrarPronto, idDoUsuario,
-  ADMIN, BEATRIZ, RAFAEL, SENHA_ALUNO, SENHA_ADMIN,
+  ADMIN, BEATRIZ, RAFAEL, SENHA_ALUNO, SENHA_ADMIN, SENHA_RAFAEL,
 } from './helpers/servidor.js';
 
 usarServidor();
@@ -56,8 +56,8 @@ describe('login, logout e /api/eu', () => {
 
 describe('troca de senha', () => {
   test('conta nova só acessa o que permite a troca, até trocar a senha', async () => {
-    db.prepare('UPDATE usuarios SET perfil_confirmado = 1 WHERE email = ?').run(BEATRIZ);
-    const cookie = await entrar(BEATRIZ, SENHA_ALUNO);
+    db.prepare('UPDATE usuarios SET perfil_confirmado = 1 WHERE email = ?').run(RAFAEL);
+    const cookie = await entrar(RAFAEL, SENHA_RAFAEL);
     const eu = await pedir('GET', '/api/eu', { cookie });
     assert.equal(eu.corpo.trocar_senha, 1);
 
@@ -66,7 +66,7 @@ describe('troca de senha', () => {
     assert.equal(bloqueada.corpo.erro, 'Troque sua senha provisória antes de continuar.');
 
     const troca = await pedir('POST', '/api/eu/senha', {
-      cookie, corpo: { senha_atual: SENHA_ALUNO, nova_senha: 'senhaNova123' },
+      cookie, corpo: { senha_atual: SENHA_RAFAEL, nova_senha: 'senhaNova123' },
     });
     assert.equal(troca.status, 200);
     assert.equal((await pedir('GET', '/api/reservas', { cookie })).status, 200);
@@ -130,7 +130,7 @@ describe('limite de tentativas (429)', () => {
 
   test('o bloqueio de um e-mail não atinge outra conta no mesmo IP', async () => {
     for (let i = 0; i < 5; i++) await pedir('POST', '/api/login', { corpo: { email: BEATRIZ, senha: 'errada123' } });
-    const r = await pedir('POST', '/api/login', { corpo: { email: RAFAEL, senha: SENHA_ALUNO } });
+    const r = await pedir('POST', '/api/login', { corpo: { email: RAFAEL, senha: SENHA_RAFAEL } });
     assert.equal(r.status, 200);
   });
 

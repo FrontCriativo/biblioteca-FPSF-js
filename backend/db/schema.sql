@@ -106,7 +106,8 @@ CREATE TABLE IF NOT EXISTS sessoes (
   expira_em  TEXT NOT NULL
 );
 
--- Depoimentos chegam pelo site e só aparecem depois de aprovados pela biblioteca.
+-- Depoimentos chegam pelo site já aprovados (o envio grava o status); a coordenação pode
+-- recusar (esconde) ou excluir. O DEFAULT 'pendente' fica por compatibilidade com bancos antigos.
 -- usuario_id fica preenchido quando quem escreveu estava logado.
 CREATE TABLE IF NOT EXISTS depoimentos (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,

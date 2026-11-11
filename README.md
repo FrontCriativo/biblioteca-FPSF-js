@@ -1,7 +1,7 @@
 # Biblioteca Virtual FPSF
 
 Site da biblioteca da Escola Prof. Francisco Pereira de Souza Filho: catálogo com busca,
-pré-reserva de livros, empréstimos, lista "Quero ler", depoimentos moderados, fale conosco
+pré-reserva de livros, empréstimos, lista "Quero ler", depoimentos (publicados na hora, com exclusão pela coordenação), fale conosco
 e painel da coordenação. Tem também uma API pública (v1) para o aplicativo Expo e outros
 sistemas.
 
@@ -33,13 +33,16 @@ npm start      # sobe o site em http://localhost:3000
 
 | Perfil | E-mail | Senha |
 |---|---|---|
-| Coordenação | `admin@fpsf.edu.br` | `admin123` |
-| Aluno | `beatriz.lima@fpsf.edu.br` | `aluno123` |
+| Coordenação | `admin@fpsf.edu.br` | `Admin.2026` |
+| Aluno | `beatriz.lima@fpsf.edu.br` | `Aluno1.2026` |
 | Aluno | `rafael.souza@fpsf.edu.br` | `aluno123` |
 
-> **Atenção:** essas senhas estão no código, então qualquer pessoa pode conhecê-las. Toda conta
-> de exemplo é obrigada a trocar a senha no primeiro acesso. Faça isso antes de colocar o site
-> no ar.
+A coordenação e a Beatriz têm senha fixa, sem troca obrigatória. O Rafael é obrigado a trocar a
+senha no primeiro acesso.
+
+> **Atenção:** essas senhas estão no código, então qualquer pessoa pode conhecê-las. Elas não são
+> criadas em produção (`NODE_ENV=production`), onde a coordenação vem de `ADMIN_EMAIL` e
+> `ADMIN_SENHA`. Não publique o site com as contas de exemplo.
 
 ## Estrutura
 
@@ -93,7 +96,7 @@ Usada pelas páginas em `frontend/js/api.js`. Autenticação por cookie de sess�
 | PUT | `/api/favoritos/:livroId` | Logado | Adiciona à lista |
 | DELETE | `/api/favoritos/:livroId` | Logado | Remove da lista |
 | GET | `/api/depoimentos` | Público | Depoimentos aprovados |
-| POST | `/api/depoimentos` | Público | Envia um depoimento para moderação |
+| POST | `/api/depoimentos` | Público | Envia um depoimento, publicado na hora |
 | POST | `/api/contato` | Público | Envia uma mensagem à biblioteca |
 | GET | `/api/admin/resumo` | Coordenação | Números do painel |
 | GET | `/api/admin/reservas` | Coordenação | Reservas; filtro `?status=`, inclusive `atrasadas` |
@@ -108,9 +111,10 @@ Usada pelas páginas em `frontend/js/api.js`. Autenticação por cookie de sess�
 | POST | `/api/admin/usuarios/:id/senha` | Coordenação | Redefine a senha de outro usuário |
 | POST | `/api/admin/usuarios/:id/desativar` | Coordenação | Desativa uma conta |
 | POST | `/api/admin/usuarios/:id/reativar` | Coordenação | Reativa uma conta |
-| GET | `/api/admin/depoimentos` | Coordenação | Depoimentos para moderar |
+| GET | `/api/admin/depoimentos` | Coordenação | Depoimentos, para moderar |
 | POST | `/api/admin/depoimentos/:id/aprovar` | Coordenação | Aprova |
-| POST | `/api/admin/depoimentos/:id/recusar` | Coordenação | Recusa |
+| POST | `/api/admin/depoimentos/:id/recusar` | Coordenação | Recusa (tira do site, mas guarda) |
+| DELETE | `/api/admin/depoimentos/:id` | Coordenação | Exclui de vez |
 | GET | `/api/admin/mensagens` | Coordenação | Mensagens; filtro `?status=` |
 | POST | `/api/admin/mensagens/:id/status` | Coordenação | Muda a situação de uma mensagem |
 
@@ -201,7 +205,7 @@ mv backend/db/biblioteca.db* backup/substituido/
 npm run seed
 ```
 
-As contas voltam às senhas de exemplo, com a troca obrigatória no primeiro acesso.
+As contas voltam às senhas de exemplo da tabela acima.
 
 ## Docker
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
   usarServidor, pedir, entrar, entrarV1, entrarPronto, tokenPronto, idDoUsuario, db,
-  ADMIN, BEATRIZ, RAFAEL, SENHA_ALUNO,
+  ADMIN, BEATRIZ, RAFAEL, SENHA_ALUNO, SENHA_RAFAEL,
 } from './helpers/servidor.js';
 import { limparVencidos } from '../backend/server.js';
 
@@ -21,7 +21,7 @@ describe('login', () => {
     assert.equal(r.corpo.mensagem, 'Login realizado com sucesso.');
     assert.match(r.corpo.data.token, /^[0-9a-f]{64}$/);
     assert.deepEqual(r.corpo.data.usuario, {
-      id: idDoUsuario(BEATRIZ), nome: 'Beatriz Lima', email: BEATRIZ, papel: 'aluno', turma: '8º ano B', trocar_senha: true,
+      id: idDoUsuario(BEATRIZ), nome: 'Beatriz Lima', email: BEATRIZ, papel: 'aluno', turma: '8º ano B', trocar_senha: false,
     });
     assert.equal(r.cookie, null);
   });
@@ -91,7 +91,7 @@ describe('um token por dispositivo', () => {
 
   test('o mesmo nome de dispositivo em contas diferentes não interfere', async () => {
     const beatriz = await entrarV1(BEATRIZ, SENHA_ALUNO, 'celular');
-    await entrarV1(RAFAEL, SENHA_ALUNO, 'celular');
+    await entrarV1(RAFAEL, SENHA_RAFAEL, 'celular');
     assert.equal((await perfil(beatriz)).status, 200);
   });
 });
@@ -155,7 +155,7 @@ describe('logout', () => {
 
 describe('conta com senha provisória', () => {
   test('pode logar, ver o perfil e sair; o resto é 403', async () => {
-    const token = await entrarV1(BEATRIZ, SENHA_ALUNO);
+    const token = await entrarV1(RAFAEL, SENHA_RAFAEL);
     const eu = await perfil(token);
     assert.equal(eu.status, 200);
     assert.equal(eu.corpo.data.trocar_senha, true);
@@ -168,13 +168,13 @@ describe('conta com senha provisória', () => {
   });
 
   test('pode trocar a senha, e aí o bloqueio cai', async () => {
-    const token = await entrarV1(BEATRIZ, SENHA_ALUNO);
+    const token = await entrarV1(RAFAEL, SENHA_RAFAEL);
     const r = await pedir('PUT', '/api/v1/usuario/senha', {
-      token, corpo: { senha_atual: SENHA_ALUNO, nova_senha: 'senhaNova123', nova_senha_confirmation: 'senhaNova123' },
+      token, corpo: { senha_atual: SENHA_RAFAEL, nova_senha: 'senhaNova123', nova_senha_confirmation: 'senhaNova123' },
     });
     assert.equal(r.status, 200);
     assert.equal((await perfil(token)).corpo.data.trocar_senha, false);
-    assert.equal((await pedir('PATCH', '/api/v1/usuario', { token, corpo: { nome: 'Beatriz L.' } })).status, 200);
+    assert.equal((await pedir('PATCH', '/api/v1/usuario', { token, corpo: { nome: 'Rafael S.' } })).status, 200);
   });
 });
 

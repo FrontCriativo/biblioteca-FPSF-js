@@ -24,12 +24,11 @@ describe('depoimentos', () => {
   test('só aprovados, mais recentes primeiro, com os nomes do Laravel', async () => {
     const admin = await entrarPronto(ADMIN);
     const ids = [];
-    for (const mensagem of ['Primeiro.', 'Segundo.', 'Pendente.']) {
+    for (const mensagem of ['Primeiro.', 'Segundo.', 'Recusado.']) {
       const { corpo } = await pedir('POST', '/api/depoimentos', { corpo: { nome: 'Ana', turma: '6º ano A', mensagem, nota: 4 } });
       ids.push(corpo.id);
     }
-    await pedir('POST', `/api/admin/depoimentos/${ids[0]}/aprovar`, { cookie: admin });
-    await pedir('POST', `/api/admin/depoimentos/${ids[1]}/aprovar`, { cookie: admin });
+    await pedir('POST', `/api/admin/depoimentos/${ids[2]}/recusar`, { cookie: admin });
 
     const { corpo } = await pedir('GET', '/api/v1/depoimentos');
     assert.equal(corpo.success, true);

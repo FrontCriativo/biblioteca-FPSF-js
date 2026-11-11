@@ -30,7 +30,7 @@ Com o servidor no ar e o banco populado (`npm run seed`):
 ```bash
 curl -s -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"beatriz.lima@fpsf.edu.br","senha":"aluno123","device_name":"terminal"}'
+  -d '{"email":"beatriz.lima@fpsf.edu.br","senha":"Aluno1.2026","device_name":"terminal"}'
 ```
 
 Para não copiar o token à mão, guarde-o numa variável do terminal:
@@ -38,7 +38,7 @@ Para não copiar o token à mão, guarde-o numa variável do terminal:
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"beatriz.lima@fpsf.edu.br","senha":"aluno123","device_name":"terminal"}' \
+  -d '{"email":"beatriz.lima@fpsf.edu.br","senha":"Aluno1.2026","device_name":"terminal"}' \
   | node -p 'JSON.parse(require("fs").readFileSync(0)).data.token')
 ```
 
@@ -50,8 +50,9 @@ curl -s http://localhost:3000/api/v1/usuario -H "Authorization: Bearer $TOKEN"
 
 ## 3. Trocar a senha provisória
 
-As contas de exemplo nascem com `trocar_senha: true`. Até a troca, só funcionam o perfil, a troca
-de senha e o logout; o resto responde 403.
+Conta com senha provisória nasce com `trocar_senha: true`. Até a troca, só funcionam o perfil, a
+troca de senha e o logout; o resto responde 403. Entre os exemplos, é o caso do Rafael
+(`rafael.souza@fpsf.edu.br` / `aluno123`): faça o login acima com ele e troque a senha assim:
 
 ```bash
 curl -s -X PUT http://localhost:3000/api/v1/usuario/senha \
